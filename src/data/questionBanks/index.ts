@@ -2,17 +2,26 @@ import { StructuredQuestion } from './types';
 import { questionBankChuong1Bo1 } from './chuong1Bo1';
 import { questionBankChuong1Bo2 } from './chuong1Bo2';
 import { questionBankChuong2Bo1 } from './chuong2Bo1';
+import { questionBankChuong2Bo2 } from './chuong2Bo2';
+import { questionBankChuong3QuyPhamPhapLuat } from './chuong3QuyPhamPhapLuat';
+import { questionBankChuong3QuanHePhapLuat } from './chuong3QuanHePhapLuat';
 import { QuizItem, QuizQuestion } from '../../types';
 
 export * from './types';
 export { questionBankChuong1Bo1 } from './chuong1Bo1';
 export { questionBankChuong1Bo2 } from './chuong1Bo2';
 export { questionBankChuong2Bo1 } from './chuong2Bo1';
+export { questionBankChuong2Bo2 } from './chuong2Bo2';
+export { questionBankChuong3QuyPhamPhapLuat } from './chuong3QuyPhamPhapLuat';
+export { questionBankChuong3QuanHePhapLuat } from './chuong3QuanHePhapLuat';
 
 export const allStructuredQuestionBanks: Record<string, StructuredQuestion[]> = {
   chuong1_bo1: questionBankChuong1Bo1,
   chuong1_bo2: questionBankChuong1Bo2,
   chuong2_bo1: questionBankChuong2Bo1,
+  chuong2_bo2: questionBankChuong2Bo2,
+  chuong3_quy_pham_phap_luat: questionBankChuong3QuyPhamPhapLuat,
+  chuong3_quan_he_phap_luat: questionBankChuong3QuanHePhapLuat,
 };
 
 function optionIdToIndex(optId: string): number {
@@ -91,6 +100,54 @@ export const OFFICIAL_QUIZ_SETS: QuizItem[] = [
     createdAt: '2024-10-27T08:00:00.000Z',
     createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
   },
+  {
+    id: 'quiz-chuong2-bo2',
+    title: 'CHƯƠNG 2 – BỘ CÂU HỎI 2: PHÁP LUẬT',
+    chapter: 'Chương 2: Pháp luật trong đời sống xã hội',
+    instructions: 'Trích xuất từ tài liệu Chương 2.pdf. Bao gồm 20 câu hỏi trắc nghiệm chuyên sâu về các kiểu pháp luật, bản chất, thuộc tính, chức năng và mối quan hệ giữa pháp luật với kinh tế, chính trị, đạo đức.',
+    durationMinutes: 20,
+    maxAttempts: 0,
+    viewScoreMode: 'immediate',
+    viewAnswersMode: 'after_submit',
+    targetClasses: ['Tất cả'],
+    status: 'published',
+    passingScore: 5.0,
+    isSample: false,
+    createdAt: '2024-10-27T10:00:00.000Z',
+    createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
+  },
+  {
+    id: 'quiz-chuong3-qppl',
+    title: 'CHƯƠNG 3 – QUY PHẠM PHÁP LUẬT',
+    chapter: 'Chương 3: Quy phạm pháp luật',
+    instructions: 'Trích xuất từ tài liệu Chương 3. Quy phạm pháp luật.pdf. Bao gồm 20 câu hỏi trắc nghiệm về cấu trúc quy phạm pháp luật (giả định, quy định, chế tài), phân loại và kỹ thuật trình bày điều luật.',
+    durationMinutes: 20,
+    maxAttempts: 0,
+    viewScoreMode: 'immediate',
+    viewAnswersMode: 'after_submit',
+    targetClasses: ['Tất cả'],
+    status: 'published',
+    passingScore: 5.0,
+    isSample: false,
+    createdAt: '2024-10-27T10:00:00.000Z',
+    createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
+  },
+  {
+    id: 'quiz-chuong3-qhpl',
+    title: 'CHƯƠNG 3 – QUAN HỆ PHÁP LUẬT',
+    chapter: 'Chương 3: Quan hệ pháp luật',
+    instructions: 'Trích xuất từ tài liệu Chương 3.Quan hệ PL.pdf. Bao gồm 20 câu hỏi trắc nghiệm về khái niệm, đặc điểm quan hệ pháp luật, các yếu tố cấu thành (chủ thể, nội dung, khách thể) và sự kiện pháp lý.',
+    durationMinutes: 20,
+    maxAttempts: 0,
+    viewScoreMode: 'immediate',
+    viewAnswersMode: 'after_submit',
+    targetClasses: ['Tất cả'],
+    status: 'published',
+    passingScore: 5.0,
+    isSample: false,
+    createdAt: '2024-10-27T10:00:00.000Z',
+    createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
+  },
 ];
 
 export const OFFICIAL_QUIZ_QUESTIONS: QuizQuestion[] = [
@@ -102,5 +159,14 @@ export const OFFICIAL_QUIZ_QUESTIONS: QuizQuestion[] = [
   ),
   ...questionBankChuong2Bo1.map((q, idx) =>
     convertToQuizQuestion(q, 'quiz-chuong2-bo1', idx + 1, 'Chương 2: Nguồn của pháp luật')
+  ),
+  ...questionBankChuong2Bo2.map((q, idx) =>
+    convertToQuizQuestion(q, 'quiz-chuong2-bo2', idx + 1, 'Chương 2: Bản chất & Vai trò của Pháp luật')
+  ),
+  ...questionBankChuong3QuyPhamPhapLuat.map((q, idx) =>
+    convertToQuizQuestion(q, 'quiz-chuong3-qppl', idx + 1, 'Chương 3: Quy phạm pháp luật')
+  ),
+  ...questionBankChuong3QuanHePhapLuat.map((q, idx) =>
+    convertToQuizQuestion(q, 'quiz-chuong3-qhpl', idx + 1, 'Chương 3: Quan hệ pháp luật')
   ),
 ];

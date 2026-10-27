@@ -237,7 +237,7 @@ export function initializeDatabase() {
     localStorage.setItem(samplePurgeKey, 'true');
   }
 
-  // Idempotently ensure the 3 Official Question Banks are loaded and up-to-date
+  // Idempotently ensure all 6 Official Question Banks (120 questions) are loaded and up-to-date
   const existingQuizzes = loadStorage<QuizItem[]>(STORAGE_KEYS.QUIZZES, []);
   let quizzesChanged = false;
   OFFICIAL_QUIZ_SETS.forEach(officialQ => {
