@@ -5,6 +5,9 @@ import { questionBankChuong2Bo1 } from './chuong2Bo1';
 import { questionBankChuong2Bo2 } from './chuong2Bo2';
 import { questionBankChuong3QuyPhamPhapLuat } from './chuong3QuyPhamPhapLuat';
 import { questionBankChuong3QuanHePhapLuat } from './chuong3QuanHePhapLuat';
+import { questionBankChuong4ThucHienPhapLuat } from './chuong4ThucHienPhapLuat';
+import { questionBankChuong4ViPhamPhapLuat } from './chuong4ViPhamPhapLuat';
+import { questionBankChuong5LuatHienPhap } from './chuong5LuatHienPhap';
 import { QuizItem, QuizQuestion } from '../../types';
 
 export * from './types';
@@ -14,6 +17,9 @@ export { questionBankChuong2Bo1 } from './chuong2Bo1';
 export { questionBankChuong2Bo2 } from './chuong2Bo2';
 export { questionBankChuong3QuyPhamPhapLuat } from './chuong3QuyPhamPhapLuat';
 export { questionBankChuong3QuanHePhapLuat } from './chuong3QuanHePhapLuat';
+export { questionBankChuong4ThucHienPhapLuat } from './chuong4ThucHienPhapLuat';
+export { questionBankChuong4ViPhamPhapLuat } from './chuong4ViPhamPhapLuat';
+export { questionBankChuong5LuatHienPhap } from './chuong5LuatHienPhap';
 
 export const allStructuredQuestionBanks: Record<string, StructuredQuestion[]> = {
   chuong1_bo1: questionBankChuong1Bo1,
@@ -22,6 +28,9 @@ export const allStructuredQuestionBanks: Record<string, StructuredQuestion[]> = 
   chuong2_bo2: questionBankChuong2Bo2,
   chuong3_quy_pham_phap_luat: questionBankChuong3QuyPhamPhapLuat,
   chuong3_quan_he_phap_luat: questionBankChuong3QuanHePhapLuat,
+  chuong4_thuc_hien_phap_luat: questionBankChuong4ThucHienPhapLuat,
+  chuong4_vi_pham_phap_luat: questionBankChuong4ViPhamPhapLuat,
+  chuong5_luat_hien_phap: questionBankChuong5LuatHienPhap,
 };
 
 function optionIdToIndex(optId: string): number {
@@ -148,6 +157,54 @@ export const OFFICIAL_QUIZ_SETS: QuizItem[] = [
     createdAt: '2024-10-27T10:00:00.000Z',
     createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
   },
+  {
+    id: 'quiz-chuong4-thpl',
+    title: 'CHƯƠNG 4 – THỰC HIỆN PHÁP LUẬT',
+    chapter: 'Chương 4: Thực hiện pháp luật',
+    instructions: 'Trích xuất từ tài liệu Chương 4. Thực hiện PL.pdf. Bao gồm 20 câu hỏi trắc nghiệm về các hình thức thực hiện pháp luật (tuân thủ, chấp hành, sử dụng, áp dụng pháp luật), văn bản áp dụng pháp luật và áp dụng tương tự.',
+    durationMinutes: 20,
+    maxAttempts: 0,
+    viewScoreMode: 'immediate',
+    viewAnswersMode: 'after_submit',
+    targetClasses: ['Tất cả'],
+    status: 'published',
+    passingScore: 5.0,
+    isSample: false,
+    createdAt: '2024-10-27T12:00:00.000Z',
+    createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
+  },
+  {
+    id: 'quiz-chuong4-vppl',
+    title: 'CHƯƠNG 4 – VI PHẠM PHÁP LUẬT',
+    chapter: 'Chương 4: Vi phạm pháp luật và trách nhiệm pháp lý',
+    instructions: 'Trích xuất từ tài liệu Chương 4. Vi phạm PL.pdf. Bao gồm 20 câu hỏi trắc nghiệm về dấu hiệu vi phạm pháp luật, cấu thành vi phạm pháp luật (mặt chủ quan, mặt khách quan, chủ thể, khách thể) và trách nhiệm pháp lý.',
+    durationMinutes: 20,
+    maxAttempts: 0,
+    viewScoreMode: 'immediate',
+    viewAnswersMode: 'after_submit',
+    targetClasses: ['Tất cả'],
+    status: 'published',
+    passingScore: 5.0,
+    isSample: false,
+    createdAt: '2024-10-27T12:00:00.000Z',
+    createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
+  },
+  {
+    id: 'quiz-chuong5-lhp',
+    title: 'CHƯƠNG 5 – LUẬT HIẾN PHÁP',
+    chapter: 'Chương 5: Luật Hiến pháp',
+    instructions: 'Trích xuất từ tài liệu Chương 5. Luật Hiến pháp.pdf. Bao gồm 30 câu hỏi trắc nghiệm về tính chất đạo luật gốc của Hiến pháp, hệ thống chính trị, Quốc hội, Chủ tịch nước, Chính phủ, quốc tịch và quy trình lập hiến.',
+    durationMinutes: 30,
+    maxAttempts: 0,
+    viewScoreMode: 'immediate',
+    viewAnswersMode: 'after_submit',
+    targetClasses: ['Tất cả'],
+    status: 'published',
+    passingScore: 5.0,
+    isSample: false,
+    createdAt: '2024-10-27T12:00:00.000Z',
+    createdBy: 'ThS. Ngô Thị Mai Anh - Khoa Luật',
+  },
 ];
 
 export const OFFICIAL_QUIZ_QUESTIONS: QuizQuestion[] = [
@@ -168,5 +225,14 @@ export const OFFICIAL_QUIZ_QUESTIONS: QuizQuestion[] = [
   ),
   ...questionBankChuong3QuanHePhapLuat.map((q, idx) =>
     convertToQuizQuestion(q, 'quiz-chuong3-qhpl', idx + 1, 'Chương 3: Quan hệ pháp luật')
+  ),
+  ...questionBankChuong4ThucHienPhapLuat.map((q, idx) =>
+    convertToQuizQuestion(q, 'quiz-chuong4-thpl', idx + 1, 'Chương 4: Thực hiện pháp luật')
+  ),
+  ...questionBankChuong4ViPhamPhapLuat.map((q, idx) =>
+    convertToQuizQuestion(q, 'quiz-chuong4-vppl', idx + 1, 'Chương 4: Vi phạm pháp luật & Trách nhiệm pháp lý')
+  ),
+  ...questionBankChuong5LuatHienPhap.map((q, idx) =>
+    convertToQuizQuestion(q, 'quiz-chuong5-lhp', idx + 1, 'Chương 5: Luật Hiến pháp')
   ),
 ];
