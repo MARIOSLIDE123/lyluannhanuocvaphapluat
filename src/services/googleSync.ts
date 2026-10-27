@@ -3,6 +3,7 @@ import { UserProfile, QuizItem, QuizAttempt, AssignmentItem, SubmissionItem } fr
 const SCRIPT_URL_KEY = 'tl_google_apps_script_url_v1';
 const LOCAL_STUDY_TIME_KEY = 'tl_student_study_time_v1';
 const LOCAL_ACTIVITY_LOG_KEY = 'tl_student_activity_log_v1';
+export const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFB74f51i0L9YYovmy156LdTS6mpglfDPNF10lBa9-OyOoN-QZGGhX3GQgwZU1STT62w/exec';
 
 export const GoogleSyncService = {
   getScriptUrl(): string {
@@ -12,7 +13,7 @@ export const GoogleSyncService = {
     } catch {
       // Ignore
     }
-    return (import.meta.env.VITE_GOOGLE_SCRIPT_URL || '').trim();
+    return (import.meta.env.VITE_GOOGLE_SCRIPT_URL || DEFAULT_SCRIPT_URL).trim();
   },
 
   setScriptUrl(url: string): void {
