@@ -1,4 +1,4 @@
-import { UserProfile, QuizItem, QuizAttempt, AssignmentItem, SubmissionItem } from '../types';
+import { UserProfile, QuizItem, QuizAttempt, AssignmentItem, SubmissionItem, MaterialItem } from '../types';
 
 const SCRIPT_URL_KEY = 'tl_google_apps_script_url_v1';
 const LOCAL_STUDY_TIME_KEY = 'tl_student_study_time_v1';
@@ -173,6 +173,62 @@ export const GoogleSyncService = {
     } catch (e) {
       console.error('Google Drive upload error:', e);
       return { success: false };
+    }
+  },
+
+  /**
+   * Đồng bộ tài liệu học tập lên Google Sheet
+   */
+  async syncMaterialOnline(material: MaterialItem): Promise<any> {
+    const payload = {
+      action: 'syncMaterial',
+      id: material.id,
+      title: material.title,
+      description: material.description,
+      category: material.category,
+      chapter: material.chapter,
+      authorOrIssuer: material.authorOrIssuer || '',
+      issueDate: material.issueDate || '',
+      effectiveDate: material.effectiveDate || '',
+      validityStatus: material.validityStatus,
+      replacementNotes: material.replacementNotes || '',
+      officialUrl: material.officialUrl || '',
+      fileName: material.fileName || '',
+      fileSize: material.fileSize || '',
+      fileType: material.fileType || 'pdf',
+      uploadedByName: material.uploadedByName || 'ThS. Ngô Thị Mai Anh',
+      updatedAt: new Date().toISOString(),
+    };
+    return await this.sendPost(payload);
+  },
+
+  /**
+   * Xóa tài liệu khỏi Google Sheet
+   */
+  async deleteMaterialOnline(materialId: string): Promise<any> {
+    const payload = {
+      action: 'deleteMaterial',
+      id: materialId,
+    };
+    return await this.sendPost(payload);
+  },
+
+  /**
+   * Tải danh sách tài liệu học tập từ Google Sheet / Google Drive về ứng dụng (cho cả Học viên & Giáo viên)
+   */
+  async fetchMaterialsOnline(): Promise<MaterialItem[]> {
+    const url = this.getScriptUrl();
+    if (!url) return [];
+
+    try {
+      const res = await this.sendPost({ action: 'getMaterials' });
+      if (res && res.success && Array.isArray(res.materials)) {
+        return res.materials as MaterialItem[];
+      }
+      return [];
+    } catch (err) {
+      console.warn('Lỗi tải tài liệu từ Google Sheet:', err);
+      return [];
     }
   },
 

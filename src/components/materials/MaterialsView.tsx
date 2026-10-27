@@ -21,6 +21,8 @@ import {
   Tag,
   BookOpen,
   ShieldCheck,
+  RefreshCw,
+  Cloud,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialItem, MaterialCategory, ValidityStatus } from '../../types';
@@ -71,6 +73,24 @@ export const MaterialsView: React.FC = () => {
   const [formError, setFormError] = useState('');
   const [fileBase64, setFileBase64] = useState<string>('');
   const [isUploadingDrive, setIsUploadingDrive] = useState<boolean>(false);
+  const [isSyncingOnline, setIsSyncingOnline] = useState<boolean>(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+
+  const syncOnlineMaterials = async () => {
+    if (!GoogleSyncService.isConfigured()) return;
+    setIsSyncingOnline(true);
+    try {
+      const remoteList = await GoogleSyncService.fetchMaterialsOnline();
+      if (remoteList && remoteList.length > 0) {
+        MaterialService.mergeRemoteMaterials(remoteList);
+      }
+      setLastSyncedTime(new Date().toLocaleTimeString('vi-VN'));
+    } catch (err) {
+      console.warn('Sync online materials error:', err);
+    } finally {
+      setIsSyncingOnline(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,7 +121,28 @@ export const MaterialsView: React.FC = () => {
   useEffect(() => {
     loadMaterials();
     const unsub = subscribe('materials', loadMaterials);
-    return () => unsub();
+
+    // Kéo tài liệu trực tiếp từ Google Sheet & Google Drive ngay khi mở trang
+    syncOnlineMaterials();
+
+    // Định kỳ tự động đồng bộ mỗi 15 giây theo thời gian thực
+    const pollInterval = setInterval(() => {
+      syncOnlineMaterials();
+    }, 15000);
+
+    // Khi người dùng chuyển tab và quay lại, tự động kiểm tra tài liệu mới
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncOnlineMaterials();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      unsub();
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [isLecturer]);
 
   // Open Edit/Create Modal
@@ -200,12 +241,19 @@ export const MaterialsView: React.FC = () => {
 
     setFileBase64('');
     setIsEditorOpen(false);
+    // Kích hoạt đồng bộ lại ngay lập tức
+    setTimeout(() => {
+      syncOnlineMaterials();
+    }, 1000);
   };
 
   const handleDeleteConfirm = () => {
     if (deletingId) {
       MaterialService.delete(deletingId);
       setDeletingId(null);
+      setTimeout(() => {
+        syncOnlineMaterials();
+      }, 1000);
     }
   };
 
@@ -270,24 +318,37 @@ export const MaterialsView: React.FC = () => {
           </p>
         </div>
 
-        {isLecturer ? (
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => handleOpenEditor()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#17365D] hover:bg-[#245A91] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer shrink-0"
+            onClick={() => syncOnlineMaterials()}
+            disabled={isSyncingOnline}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#17365D] text-xs font-semibold border border-blue-200 transition-colors cursor-pointer disabled:opacity-50"
+            title="Đồng bộ tài liệu mới nhất từ Google Drive & Google Sheet"
           >
-            <Plus className="w-4 h-4 text-[#F28C28]" />
-            <span>Tải lên tài liệu mới</span>
+            <RefreshCw className={`w-3.5 h-3.5 text-[#245A91] ${isSyncingOnline ? 'animate-spin' : ''}`} />
+            <span>{isSyncingOnline ? 'Đang đồng bộ...' : 'Đồng bộ Google Drive'}</span>
+            {lastSyncedTime && <span className="text-[10px] text-slate-500 hidden sm:inline">({lastSyncedTime})</span>}
           </button>
-        ) : (
-          <button
-            onClick={openTeacherModal}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
-            title="Dành cho Giảng viên"
-          >
-            <ShieldCheck className="w-4 h-4 text-[#F28C28]" />
-            <span>Giảng viên tải lên</span>
-          </button>
-        )}
+
+          {isLecturer ? (
+            <button
+              onClick={() => handleOpenEditor()}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#17365D] hover:bg-[#245A91] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4 text-[#F28C28]" />
+              <span>Tải lên tài liệu mới</span>
+            </button>
+          ) : (
+            <button
+              onClick={openTeacherModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
+              title="Dành cho Giảng viên"
+            >
+              <ShieldCheck className="w-4 h-4 text-[#F28C28]" />
+              <span>Giảng viên tải lên</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Grid: Sidebar folders & Materials list */}

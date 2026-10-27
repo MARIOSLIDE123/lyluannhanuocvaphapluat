@@ -9,8 +9,30 @@ interface DocumentViewerModalProps {
 
 export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ material, onClose }) => {
   const [zoom, setZoom] = useState<number>(100);
+  const [viewMode, setViewMode] = useState<'drive' | 'summary'>(() => {
+    return material?.officialUrl && material.officialUrl.includes('drive.google.com') ? 'drive' : 'summary';
+  });
 
   if (!material) return null;
+
+  const getDriveEmbedUrl = (url?: string): string => {
+    if (!url) return '';
+    if (url.includes('drive.google.com/file/d/')) {
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    }
+    if (url.includes('drive.google.com/uc?export=download&id=')) {
+      const match = url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    }
+    return '';
+  };
+
+  const driveEmbedUrl = getDriveEmbedUrl(material.officialUrl);
 
   const getValidityBadge = (status: ValidityStatus) => {
     switch (status) {
@@ -193,68 +215,118 @@ ${material.description}
           </div>
         )}
 
-        {/* Document Content Viewport */}
-        <div className="flex-1 bg-slate-200 p-4 md:p-8 overflow-y-auto flex justify-center">
-          <div
-            style={{ width: `${zoom}%`, maxWidth: '900px' }}
-            className="bg-white shadow-xl rounded-xl p-8 md:p-12 min-h-full transition-all duration-150 border border-slate-300 font-serif leading-relaxed text-slate-800"
-          >
-            <div className="text-center border-b border-slate-300 pb-6 mb-8 font-sans">
-              <p className="text-xs uppercase tracking-wider font-semibold text-slate-500">
-                Học viện Phòng cháy chữa cháy và Cứu nạn cứu hộ
-              </p>
-              <p className="text-xs uppercase font-bold text-[#17365D]">Khoa Luật - Bộ môn Lý luận Nhà nước & Pháp luật</p>
-              <div className="w-20 h-0.5 bg-[#F28C28] mx-auto my-3" />
-              <h1 className="text-xl md:text-2xl font-bold text-[#17365D] uppercase mt-2 font-serif">
-                {material.title}
-              </h1>
-              <p className="text-xs text-slate-500 mt-1 italic font-sans">
-                Giảng viên phụ trách: ThS. Ngô Thị Mai Anh
-              </p>
+        {/* Toggle between Google Drive Embed View and Academic Summary */}
+        {driveEmbedUrl && (
+          <div className="bg-slate-100 border-b border-slate-200 px-6 py-2 flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode('drive')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  viewMode === 'drive'
+                    ? 'bg-[#17365D] text-white shadow-xs'
+                    : 'bg-white text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <span>Xem tệp trực tiếp (Google Drive)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('summary')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  viewMode === 'summary'
+                    ? 'bg-[#17365D] text-white shadow-xs'
+                    : 'bg-white text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <span>Bản tóm tắt học thuật</span>
+              </button>
             </div>
-
-            <div className="prose max-w-none text-slate-700 text-sm md:text-base space-y-4">
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 font-sans text-xs mb-6 not-italic">
-                <span className="font-bold text-slate-800">Tóm tắt nội dung học tập: </span>
-                {material.description}
-              </div>
-
-              <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-2">
-                1. MỤC ĐÍCH VÀ YÊU CẦU NGHIÊN CỨU
-              </h2>
-              <p>
-                Tài liệu phục vụ công tác giảng dạy và học tập học phần <strong>Lý luận Nhà nước và Pháp luật</strong> dành cho học viên, sinh viên hệ Đại học Học viện PCCC & CNCH.
-                Yêu cầu người học tự đọc kỹ nội dung, đối chiếu với đề cương học phần và làm rõ các mối liên hệ thực tiễn trong công tác bảo đảm trật tự an toàn phòng cháy, chữa cháy và cứu nạn, cứu hộ.
-              </p>
-
-              <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-4">
-                2. NỘI DUNG TRỌNG TÂM
-              </h2>
-              <p>
-                - Nắm vững hệ thống khái niệm, phạm trù, quy luật cơ bản về nguồn gốc, bản chất, chức năng, hình thức và bộ máy của Nhà nước, trọng tâm là Nhà nước Cộng hòa xã hội chủ nghĩa Việt Nam.
-              </p>
-              <p>
-                - Hiểu rõ bản chất, nguồn, quy phạm pháp luật, quan hệ pháp luật, thực hiện pháp luật, vi phạm pháp luật và trách nhiệm pháp lý.
-              </p>
-              <p>
-                - Vận dụng kiến thức lý luận để nhận thức đúng đắn đường lối, chính sách của Đảng và pháp luật của Nhà nước trong lĩnh vực quản lý nhà nước về an ninh trật tự, PCCC và CNCH.
-              </p>
-
-              <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-4">
-                3. TÀI LIỆU VÀ CĂN CỨ THAM KHẢO
-              </h2>
-              <ul className="list-disc pl-5 space-y-1 font-sans text-xs text-slate-600">
-                <li>Hiến pháp nước Cộng hòa xã hội chủ nghĩa Việt Nam năm 2013.</li>
-                <li>Luật Ban hành văn bản quy phạm pháp luật năm 2015 (sửa đổi, bổ sung năm 2020).</li>
-                <li>Giáo trình Lý luận Nhà nước và Pháp luật - Học viện Phòng cháy chữa cháy và Cứu nạn cứu hộ.</li>
-              </ul>
-            </div>
-
-            <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center text-xs text-slate-400 font-sans">
-              <span>Học phần: Lý luận Nhà nước và Pháp luật</span>
-              <span>Trang 1 / 1</span>
-            </div>
+            <a
+              href={material.officialUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-[#245A91] hover:underline font-semibold flex items-center gap-1"
+            >
+              <span>Mở tab mới trên Google Drive</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
+        )}
+
+        {/* Document Content Viewport */}
+        <div className="flex-1 bg-slate-200 overflow-hidden flex justify-center">
+          {driveEmbedUrl && viewMode === 'drive' ? (
+            <iframe
+              src={driveEmbedUrl}
+              title={material.title}
+              className="w-full h-full border-0 bg-white"
+              allow="autoplay"
+            />
+          ) : (
+            <div className="w-full h-full p-4 md:p-8 overflow-y-auto flex justify-center">
+              <div
+                style={{ width: `${zoom}%`, maxWidth: '900px' }}
+                className="bg-white shadow-xl rounded-xl p-8 md:p-12 min-h-full transition-all duration-150 border border-slate-300 font-serif leading-relaxed text-slate-800"
+              >
+                <div className="text-center border-b border-slate-300 pb-6 mb-8 font-sans">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-slate-500">
+                    Học viện Phòng cháy chữa cháy và Cứu nạn cứu hộ
+                  </p>
+                  <p className="text-xs uppercase font-bold text-[#17365D]">Khoa Luật - Bộ môn Lý luận Nhà nước & Pháp luật</p>
+                  <div className="w-20 h-0.5 bg-[#F28C28] mx-auto my-3" />
+                  <h1 className="text-xl md:text-2xl font-bold text-[#17365D] uppercase mt-2 font-serif">
+                    {material.title}
+                  </h1>
+                  <p className="text-xs text-slate-500 mt-1 italic font-sans">
+                    Giảng viên phụ trách: ThS. Ngô Thị Mai Anh
+                  </p>
+                </div>
+
+                <div className="prose max-w-none text-slate-700 text-sm md:text-base space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 font-sans text-xs mb-6 not-italic">
+                    <span className="font-bold text-slate-800">Tóm tắt nội dung học tập: </span>
+                    {material.description}
+                  </div>
+
+                  <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-2">
+                    1. MỤC ĐÍCH VÀ YÊU CẦU NGHIÊN CỨU
+                  </h2>
+                  <p>
+                    Tài liệu phục vụ công tác giảng dạy và học tập học phần <strong>Lý luận Nhà nước và Pháp luật</strong> dành cho học viên, sinh viên hệ Đại học Học viện PCCC & CNCH.
+                    Yêu cầu người học tự đọc kỹ nội dung, đối chiếu với đề cương học phần và làm rõ các mối liên hệ thực tiễn trong công tác bảo đảm trật tự an toàn phòng cháy, chữa cháy và cứu nạn, cứu hộ.
+                  </p>
+
+                  <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-4">
+                    2. NỘI DUNG TRỌNG TÂM
+                  </h2>
+                  <p>
+                    - Nắm vững hệ thống khái niệm, phạm trù, quy luật cơ bản về nguồn gốc, bản chất, chức năng, hình thức và bộ máy của Nhà nước, trọng tâm là Nhà nước Cộng hòa xã hội chủ nghĩa Việt Nam.
+                  </p>
+                  <p>
+                    - Hiểu rõ bản chất, nguồn, quy phạm pháp luật, quan hệ pháp luật, thực hiện pháp luật, vi phạm pháp luật và trách nhiệm pháp lý.
+                  </p>
+                  <p>
+                    - Vận dụng kiến thức lý luận để nhận thức đúng đắn đường lối, chính sách của Đảng và pháp luật của Nhà nước trong lĩnh vực quản lý nhà nước về an ninh trật tự, PCCC và CNCH.
+                  </p>
+
+                  <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-4">
+                    3. TÀI LIỆU VÀ CĂN CỨ THAM KHẢO
+                  </h2>
+                  <ul className="list-disc pl-5 space-y-1 font-sans text-xs text-slate-600">
+                    <li>Hiến pháp nước Cộng hòa xã hội chủ nghĩa Việt Nam năm 2013.</li>
+                    <li>Luật Ban hành văn bản quy phạm pháp luật năm 2015 (sửa đổi, bổ sung năm 2020).</li>
+                    <li>Giáo trình Lý luận Nhà nước và Pháp luật - Học viện Phòng cháy chữa cháy và Cứu nạn cứu hộ.</li>
+                  </ul>
+                </div>
+
+                <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center text-xs text-slate-400 font-sans">
+                  <span>Học phần: Lý luận Nhà nước và Pháp luật</span>
+                  <span>Trang 1 / 1</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

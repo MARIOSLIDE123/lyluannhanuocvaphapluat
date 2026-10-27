@@ -96,6 +96,25 @@ function chayThuNghiem() {
     "Người tải lên"
   ]);
 
+  getOrCreateSheet(ss, "KhoHocLieu", [
+    "ID Tài liệu",
+    "Tên tài liệu",
+    "Mô tả",
+    "Phân loại",
+    "Chương học",
+    "Tác giả / Cơ quan",
+    "Ngày ban hành",
+    "Ngày hiệu lực",
+    "Tình trạng hiệu lực",
+    "Ghi chú thay thế",
+    "Link Google Drive / Nguồn",
+    "Tên tệp",
+    "Dung lượng",
+    "Định dạng",
+    "Người tải lên",
+    "Thời gian cập nhật"
+  ]);
+
   Logger.log("2. Đang kiểm tra / tạo thư mục Google Drive: " + DRIVE_FOLDER_NAME);
   var folder = getOrCreateDriveFolder(DRIVE_FOLDER_NAME);
   Logger.log("✅ Thư mục Google Drive: " + folder.getName() + " (ID: " + folder.getId() + ")");
@@ -108,6 +127,12 @@ function chayThuNghiem() {
  * Xử lý GET request từ trình duyệt hoặc kiểm tra kết nối
  */
 function doGet(e) {
+  var action = (e && e.parameter && e.parameter.action) || "";
+  if (action === "getMaterials") {
+    var ss = getSpreadsheet();
+    return jsonResponse(getMaterialsFromSheet(ss));
+  }
+
   return ContentService.createTextOutput(JSON.stringify({
     status: "active",
     message: "Google Apps Script API - Lý luận Nhà nước và Pháp luật đang hoạt động sẵn sàng!",
@@ -298,6 +323,33 @@ function doPost(e) {
         data.uploadedBy || "Giáo viên"
       ]);
       
+      // Đồng thời cập nhật hoặc thêm vào KhoHocLieu để hiển thị trực tiếp cho học viên
+      var matSheet = getOrCreateSheet(ss, "KhoHocLieu", [
+        "ID Tài liệu", "Tên tài liệu", "Mô tả", "Phân loại", "Chương học",
+        "Tác giả / Cơ quan", "Ngày ban hành", "Ngày hiệu lực", "Tình trạng hiệu lực",
+        "Ghi chú thay thế", "Link Google Drive / Nguồn", "Tên tệp", "Dung lượng",
+        "Định dạng", "Người tải lên", "Thời gian cập nhật"
+      ]);
+      var matId = data.id || ("mat-drive-" + fileId);
+      matSheet.appendRow([
+        matId,
+        data.title || data.fileName,
+        data.description || "Tài liệu học tập tải lên từ Google Drive",
+        data.category || "02_textbooks",
+        data.chapter || "Chương chung",
+        data.authorOrIssuer || "Khoa Luật",
+        "",
+        "",
+        "active",
+        "",
+        viewUrl,
+        data.fileName,
+        data.fileSize || "1.0 MB",
+        data.fileType || "pdf",
+        data.uploadedBy || "Giáo viên",
+        timeStr
+      ]);
+
       return jsonResponse({
         success: true,
         fileId: fileId,
@@ -305,6 +357,96 @@ function doPost(e) {
         downloadUrl: downloadUrl,
         message: "Đã tải file lên Google Drive thành công!"
       });
+    }
+
+    // 6. Lấy danh sách tài liệu học tập (cho cả Học viên & Giáo viên)
+    if (action === "getMaterials") {
+      return jsonResponse(getMaterialsFromSheet(ss));
+    }
+
+    // 7. Đồng bộ chi tiết tài liệu học tập (Giáo viên tạo / sửa)
+    if (action === "syncMaterial") {
+      var matSheet = getOrCreateSheet(ss, "KhoHocLieu", [
+        "ID Tài liệu",
+        "Tên tài liệu",
+        "Mô tả",
+        "Phân loại",
+        "Chương học",
+        "Tác giả / Cơ quan",
+        "Ngày ban hành",
+        "Ngày hiệu lực",
+        "Tình trạng hiệu lực",
+        "Ghi chú thay thế",
+        "Link Google Drive / Nguồn",
+        "Tên tệp",
+        "Dung lượng",
+        "Định dạng",
+        "Người tải lên",
+        "Thời gian cập nhật"
+      ]);
+
+      var matId = (data.id || "").toString().trim();
+      if (!matId) {
+        matId = "mat-" + new Date().getTime();
+      }
+
+      var rows = matSheet.getDataRange().getValues();
+      var foundRow = -1;
+      for (var i = 1; i < rows.length; i++) {
+        if (rows[i][0] && rows[i][0].toString().trim() === matId) {
+          foundRow = i + 1;
+          break;
+        }
+      }
+
+      var nowStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
+      var rowData = [
+        matId,
+        data.title || "Tài liệu chưa đặt tên",
+        data.description || "",
+        data.category || "02_textbooks",
+        data.chapter || "Chương chung",
+        data.authorOrIssuer || "",
+        data.issueDate || "",
+        data.effectiveDate || "",
+        data.validityStatus || "active",
+        data.replacementNotes || "",
+        data.officialUrl || "",
+        data.fileName || "",
+        data.fileSize || "1.0 MB",
+        data.fileType || "pdf",
+        data.uploadedByName || "ThS. Ngô Thị Mai Anh",
+        nowStr
+      ];
+
+      if (foundRow > 0) {
+        matSheet.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
+      } else {
+        matSheet.appendRow(rowData);
+      }
+
+      logActivity(ss, "GV-MAIANH", data.uploadedByName || "Giáo viên", "Tải lên / Cập nhật tài liệu", data.title || matId);
+      return jsonResponse({
+        success: true,
+        id: matId,
+        message: "Đã đồng bộ tài liệu vào Google Sheet thành công!"
+      });
+    }
+
+    // 8. Xóa tài liệu khỏi Google Sheet
+    if (action === "deleteMaterial") {
+      var matSheet = ss.getSheetByName("KhoHocLieu");
+      if (matSheet) {
+        var matId = (data.id || "").toString().trim();
+        var rows = matSheet.getDataRange().getValues();
+        for (var i = 1; i < rows.length; i++) {
+          if (rows[i][0] && rows[i][0].toString().trim() === matId) {
+            matSheet.deleteRow(i + 1);
+            break;
+          }
+        }
+      }
+      return jsonResponse({ success: true, message: "Đã xóa tài liệu khỏi Google Sheet!" });
     }
     
     return jsonResponse({ success: false, error: "Hành động không hợp lệ: " + action });
@@ -397,6 +539,88 @@ function getMimeType(type, filename) {
   if (type === "pptx" || ext === "pptx") return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
   if (type === "xlsx" || ext === "xlsx") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   return "application/octet-stream";
+}
+
+function getMaterialsFromSheet(ss) {
+  try {
+    if (!ss) ss = getSpreadsheet();
+    var sheet = ss ? ss.getSheetByName("KhoHocLieu") : null;
+    var materials = [];
+
+    if (sheet) {
+      var rows = sheet.getDataRange().getValues();
+      for (var i = 1; i < rows.length; i++) {
+        var r = rows[i];
+        if (!r[0] && !r[1]) continue;
+        materials.push({
+          id: (r[0] || ("mat-" + i)).toString(),
+          title: (r[1] || "").toString(),
+          description: (r[2] || "").toString(),
+          category: (r[3] || "02_textbooks").toString(),
+          chapter: (r[4] || "Chương chung").toString(),
+          authorOrIssuer: (r[5] || "").toString(),
+          issueDate: (r[6] || "").toString(),
+          effectiveDate: (r[7] || "").toString(),
+          validityStatus: (r[8] || "active").toString(),
+          replacementNotes: (r[9] || "").toString(),
+          officialUrl: (r[10] || "").toString(),
+          fileName: (r[11] || "").toString(),
+          fileSize: (r[12] || "1.0 MB").toString(),
+          fileType: (r[13] || "pdf").toString(),
+          uploadedByName: (r[14] || "ThS. Ngô Thị Mai Anh").toString(),
+          uploadedAt: (r[15] || "").toString(),
+          status: "published",
+          isSample: false
+        });
+      }
+    }
+
+    // Đọc thêm từ TaiLieuGoogleDrive nếu có file tải lên mà chưa có trong KhoHocLieu
+    var driveSheet = ss ? ss.getSheetByName("TaiLieuGoogleDrive") : null;
+    if (driveSheet) {
+      var dRows = driveSheet.getDataRange().getValues();
+      for (var k = 1; k < dRows.length; k++) {
+        var dr = dRows[k];
+        var fileId = dr[4] ? dr[4].toString() : "";
+        var viewUrl = dr[5] ? dr[5].toString() : "";
+        var exists = materials.some(function(m) {
+          return m.officialUrl === viewUrl || (fileId && m.id.indexOf(fileId) > -1);
+        });
+
+        if (!exists && dr[1]) {
+          materials.unshift({
+            id: "mat-drive-" + (fileId || k),
+            title: dr[1].toString(),
+            description: "Tài liệu học phần tải lên Google Drive",
+            category: "02_textbooks",
+            chapter: dr[2] ? dr[2].toString() : "Chương chung",
+            authorOrIssuer: "Khoa Luật",
+            issueDate: "",
+            effectiveDate: "",
+            validityStatus: "active",
+            replacementNotes: "",
+            officialUrl: viewUrl,
+            fileName: dr[1].toString(),
+            fileSize: "1.0 MB",
+            fileType: dr[3] ? dr[3].toString() : "pdf",
+            uploadedByName: dr[7] ? dr[7].toString() : "Giáo viên",
+            uploadedAt: dr[0] ? dr[0].toString() : "",
+            status: "published",
+            isSample: false
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      materials: materials,
+      total: materials.length,
+      timestamp: new Date().toISOString()
+    };
+  } catch (err) {
+    return { success: false, error: err.toString(), materials: [] };
+  }
 }
 
 function jsonResponse(obj) {

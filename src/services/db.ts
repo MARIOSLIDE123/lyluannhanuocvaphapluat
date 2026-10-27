@@ -10,6 +10,7 @@ import {
   SystemConfig,
 } from '../types';
 import { OFFICIAL_QUIZ_SETS, OFFICIAL_QUIZ_QUESTIONS } from '../data/questionBanks';
+import { GoogleSyncService } from './googleSync';
 
 const STORAGE_KEYS = {
   CONFIG: 'tl_system_config_v1',
@@ -374,12 +375,55 @@ export const MaterialService = {
     }
     saveStorage(STORAGE_KEYS.MATERIALS, list);
     notify('materials');
+
+    // Đồng bộ trực tiếp lên Google Sheet & Drive theo thời gian thực
+    if (GoogleSyncService.isConfigured()) {
+      GoogleSyncService.syncMaterialOnline(savedItem).catch(err => {
+        console.warn('Real-time Google Sheet material sync notice:', err);
+      });
+    }
+
     return savedItem;
   },
   delete(id: string): void {
     const list = this.getAll().filter(m => m.id !== id);
     saveStorage(STORAGE_KEYS.MATERIALS, list);
     notify('materials');
+
+    // Xóa khỏi Google Sheet theo thời gian thực
+    if (GoogleSyncService.isConfigured()) {
+      GoogleSyncService.deleteMaterialOnline(id).catch(err => {
+        console.warn('Real-time Google Sheet material deletion notice:', err);
+      });
+    }
+  },
+  mergeRemoteMaterials(remoteList: MaterialItem[]): MaterialItem[] {
+    if (!Array.isArray(remoteList) || remoteList.length === 0) return this.getAll();
+    const current = this.getAll();
+    let hasChanges = false;
+
+    remoteList.forEach(remoteItem => {
+      const idx = current.findIndex(
+        m => m.id === remoteItem.id || (m.officialUrl && remoteItem.officialUrl && m.officialUrl === remoteItem.officialUrl)
+      );
+      if (idx >= 0) {
+        current[idx] = {
+          ...current[idx],
+          ...remoteItem,
+          fileData: current[idx].fileData || remoteItem.fileData,
+        };
+        hasChanges = true;
+      } else {
+        current.unshift(remoteItem);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      saveStorage(STORAGE_KEYS.MATERIALS, current);
+      notify('materials');
+    }
+    return current;
   },
 };
 
