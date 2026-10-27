@@ -165,6 +165,8 @@ export const QuizzesView: React.FC = () => {
   };
 
   const handleSelectAnswer = (qId: string, optIndex: number) => {
+    // Khóa câu trả lời sau lần chọn đầu tiên trong lượt luyện tập đó
+    if (userAnswers[qId] !== undefined) return;
     setUserAnswers(prev => ({
       ...prev,
       [qId]: optIndex,
@@ -525,8 +527,8 @@ export const QuizzesView: React.FC = () => {
                   )}
                   <span>
                     {isAnswerCorrect
-                      ? 'Chính xác! Bạn được cộng +1 điểm theo thời gian thực.'
-                      : `Chưa chính xác! Đáp án đúng là: ${String.fromCharCode(65 + currentQ.correctAnswer)}.`}
+                      ? 'CHÍNH XÁC! Bạn được cộng +1 điểm theo thời gian thực.'
+                      : `CHƯA CHÍNH XÁC! Đáp án đúng là phương án ${String.fromCharCode(65 + currentQ.correctAnswer)}.`}
                   </span>
                 </div>
                 <span className="font-mono text-xs px-2.5 py-1 rounded-lg bg-white shadow-xs border border-slate-200">
@@ -568,6 +570,25 @@ export const QuizzesView: React.FC = () => {
                     className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${optionClass}`}
                   >
                     <div className="flex items-start gap-3 flex-1">
+                      {/* Radio button selection indicator */}
+                      <div className="pt-1 shrink-0">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? isCorrectOpt
+                                ? 'border-emerald-600 bg-emerald-600'
+                                : 'border-red-600 bg-red-600'
+                              : isCorrectOpt && hasAnsweredCurrentQ
+                              ? 'border-emerald-600 bg-emerald-600'
+                              : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {(isSelected || (hasAnsweredCurrentQ && isCorrectOpt)) && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                      </div>
+
                       <div
                         className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 transition-colors ${badgeClass}`}
                       >
@@ -1044,7 +1065,7 @@ export const QuizzesView: React.FC = () => {
                     className="w-full py-2.5 rounded-xl bg-[#17365D] hover:bg-[#245A91] text-white text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <CheckSquare className="w-4 h-4 text-[#F28C28]" />
-                    <span>{myAttempts.length > 0 ? 'Làm lại bài kiểm tra' : 'Bắt đầu làm bài'}</span>
+                    <span>{myAttempts.length > 0 ? 'LUYỆN TẬP LẠI' : 'BẮT ĐẦU LUYỆN TẬP'}</span>
                   </button>
                 )}
               </div>

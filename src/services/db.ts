@@ -9,6 +9,7 @@ import {
   AnnouncementItem,
   SystemConfig,
 } from '../types';
+import { OFFICIAL_QUIZ_SETS, OFFICIAL_QUIZ_QUESTIONS } from '../data/questionBanks';
 
 const STORAGE_KEYS = {
   CONFIG: 'tl_system_config_v1',
@@ -115,8 +116,8 @@ const DEMO_STUDENTS: UserProfile[] = [];
 const SEED_MATERIALS: MaterialItem[] = [];
 const SEED_ASSIGNMENTS: AssignmentItem[] = [];
 const SEED_SUBMISSIONS: SubmissionItem[] = [];
-const SEED_QUIZZES: QuizItem[] = [];
-const SEED_QUESTIONS: QuizQuestion[] = [];
+const SEED_QUIZZES: QuizItem[] = OFFICIAL_QUIZ_SETS;
+const SEED_QUESTIONS: QuizQuestion[] = OFFICIAL_QUIZ_QUESTIONS;
 const SEED_ATTEMPTS: QuizAttempt[] = [];
 
 // Seed Sample Announcements
@@ -186,8 +187,8 @@ export function initializeDatabase() {
     saveStorage(STORAGE_KEYS.MATERIALS, []);
     saveStorage(STORAGE_KEYS.ASSIGNMENTS, []);
     saveStorage(STORAGE_KEYS.SUBMISSIONS, []);
-    saveStorage(STORAGE_KEYS.QUIZZES, []);
-    saveStorage(STORAGE_KEYS.QUESTIONS, []);
+    saveStorage(STORAGE_KEYS.QUIZZES, OFFICIAL_QUIZ_SETS);
+    saveStorage(STORAGE_KEYS.QUESTIONS, OFFICIAL_QUIZ_QUESTIONS);
     saveStorage(STORAGE_KEYS.ATTEMPTS, []);
     saveStorage(STORAGE_KEYS.ANNOUNCEMENTS, SEED_ANNOUNCEMENTS);
     console.log('Database initialized with default schema & clean empty content.');
@@ -233,6 +234,41 @@ export function initializeDatabase() {
     }
 
     localStorage.setItem(samplePurgeKey, 'true');
+  }
+
+  // Idempotently ensure the 3 Official Question Banks are loaded and up-to-date
+  const existingQuizzes = loadStorage<QuizItem[]>(STORAGE_KEYS.QUIZZES, []);
+  let quizzesChanged = false;
+  OFFICIAL_QUIZ_SETS.forEach(officialQ => {
+    const idx = existingQuizzes.findIndex(q => q.id === officialQ.id);
+    if (idx >= 0) {
+      existingQuizzes[idx] = { ...existingQuizzes[idx], ...officialQ };
+      quizzesChanged = true;
+    } else {
+      existingQuizzes.push(officialQ);
+      quizzesChanged = true;
+    }
+  });
+  if (quizzesChanged) {
+    saveStorage(STORAGE_KEYS.QUIZZES, existingQuizzes);
+    notify('quizzes');
+  }
+
+  const existingQuestions = loadStorage<QuizQuestion[]>(STORAGE_KEYS.QUESTIONS, []);
+  let questionsChanged = false;
+  OFFICIAL_QUIZ_QUESTIONS.forEach(officialQ => {
+    const idx = existingQuestions.findIndex(q => q.id === officialQ.id);
+    if (idx >= 0) {
+      existingQuestions[idx] = { ...existingQuestions[idx], ...officialQ };
+      questionsChanged = true;
+    } else {
+      existingQuestions.push(officialQ);
+      questionsChanged = true;
+    }
+  });
+  if (questionsChanged) {
+    saveStorage(STORAGE_KEYS.QUESTIONS, existingQuestions);
+    notify('questions');
   }
 }
 
@@ -483,7 +519,14 @@ export const AssignmentService = {
 // ================= QUIZZES & QUESTIONS =================
 export const QuizService = {
   getQuizzes(): QuizItem[] {
-    return loadStorage<QuizItem[]>(STORAGE_KEYS.QUIZZES, SEED_QUIZZES);
+    const list = loadStorage<QuizItem[]>(STORAGE_KEYS.QUIZZES, SEED_QUIZZES);
+    const missing = OFFICIAL_QUIZ_SETS.filter(oq => !list.some(q => q.id === oq.id));
+    if (missing.length > 0) {
+      const merged = [...list, ...missing];
+      saveStorage(STORAGE_KEYS.QUIZZES, merged);
+      return merged;
+    }
+    return list;
   },
   getPublishedQuizzes(): QuizItem[] {
     return this.getQuizzes().filter(q => q.status === 'published');
@@ -521,7 +564,14 @@ export const QuizService = {
 
   // Questions
   getAllQuestions(): QuizQuestion[] {
-    return loadStorage<QuizQuestion[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
+    const list = loadStorage<QuizQuestion[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
+    const missing = OFFICIAL_QUIZ_QUESTIONS.filter(oq => !list.some(q => q.id === oq.id));
+    if (missing.length > 0) {
+      const merged = [...list, ...missing];
+      saveStorage(STORAGE_KEYS.QUESTIONS, merged);
+      return merged;
+    }
+    return list;
   },
   getQuestionsByQuiz(quizId: string): QuizQuestion[] {
     return this.getAllQuestions()
