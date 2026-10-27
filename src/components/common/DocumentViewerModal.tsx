@@ -43,7 +43,24 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ materi
   };
 
   const handleDownload = () => {
-    // Generate actual file blob download
+    // If Google Drive link is available, download/open directly
+    if (material.officialUrl && material.officialUrl.startsWith('http')) {
+      window.open(material.officialUrl, '_blank');
+      return;
+    }
+
+    // If file data (base64) is stored
+    if (material.fileData && material.fileData.startsWith('data:')) {
+      const a = document.createElement('a');
+      a.href = material.fileData;
+      a.download = material.fileName || `${material.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    // Fallback document text export
     const content = `TÀI LIỆU HỌC PHẦN: LÝ LUẬN NHÀ NƯỚC VÀ PHÁP LUẬT
 HỌC VIỆN PHÒNG CHÁY CHỮA CHÁY VÀ CỨU NẠN CỨU HỘ - KHOA LUẬT
 Giảng viên: Ngô Thị Mai Anh

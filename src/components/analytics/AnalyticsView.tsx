@@ -26,7 +26,7 @@ import { exportGradebookToExcel } from '../../services/excel';
 export const AnalyticsView: React.FC = () => {
   const { isLecturer, currentUser, loginTeacher } = useAuth();
 
-  const [teacherUsername, setTeacherUsername] = useState('ngothimaianh');
+  const [teacherUsername, setTeacherUsername] = useState('');
   const [teacherPassword, setTeacherPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
@@ -101,7 +101,7 @@ export const AnalyticsView: React.FC = () => {
     }
     const success = loginTeacher(teacherUsername, teacherPassword);
     if (!success) {
-      setLoginError('Tài khoản hoặc mật khẩu không chính xác. Mặc định: ngothimaianh / 2026');
+      setLoginError('Tài khoản hoặc mật khẩu không chính xác. Vui lòng thử lại!');
     }
   };
 
@@ -121,7 +121,7 @@ export const AnalyticsView: React.FC = () => {
 
         <form onSubmit={handleTeacherLogin} className="p-7 space-y-4">
           <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl p-4 text-xs leading-relaxed">
-            Phần thống kê kết quả học tập và xuất sổ điểm Excel yêu cầu đăng nhập bằng tài khoản Giáo viên <strong>(ngothimaianh / 2026)</strong>.
+            Phần thống kê kết quả học tập và xuất sổ điểm Excel yêu cầu đăng nhập bằng tài khoản Giáo viên.
           </div>
 
           {loginError && (
@@ -141,7 +141,7 @@ export const AnalyticsView: React.FC = () => {
                 required
                 value={teacherUsername}
                 onChange={e => setTeacherUsername(e.target.value)}
-                placeholder="ngothimaianh"
+                placeholder="Nhập tài khoản giáo viên"
                 className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#245A91] font-medium"
               />
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -158,7 +158,7 @@ export const AnalyticsView: React.FC = () => {
                 required
                 value={teacherPassword}
                 onChange={e => setTeacherPassword(e.target.value)}
-                placeholder="Nhập mật khẩu (2026)"
+                placeholder="Nhập mật khẩu"
                 className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#245A91] font-medium"
               />
               <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />

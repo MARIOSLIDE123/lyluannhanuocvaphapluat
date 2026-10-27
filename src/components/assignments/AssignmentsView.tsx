@@ -28,6 +28,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { AssignmentItem, SubmissionItem, UserProfile } from '../../types';
 import { AssignmentService, MaterialService, UserService, subscribe } from '../../services/db';
+import { GoogleSyncService } from '../../services/googleSync';
 import { exportSubmissionsToExcel } from '../../services/excel';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { DocumentViewerModal } from '../common/DocumentViewerModal';
@@ -213,7 +214,7 @@ export const AssignmentsView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      AssignmentService.submitAssignment({
+      const sub = AssignmentService.submitAssignment({
         assignmentId: activeAssignment.id,
         student: currentUser,
         textContent: studentTextContent.trim(),
@@ -221,7 +222,12 @@ export const AssignmentsView: React.FC = () => {
         attachedFileSize: studentAttachedFile ? `${Math.round(studentAttachedFile.size / 1024)} KB` : undefined,
       });
 
-      setSubmissionSuccessMsg('Nộp bài tự nghiên cứu thành công! Giảng viên đã nhận được bài làm của bạn.');
+      // Synchronize in real-time to Google Sheet
+      GoogleSyncService.syncSubmission(activeAssignment, sub, currentUser).catch(err => {
+        console.warn('Real-time Google Sheet submission sync error:', err);
+      });
+
+      setSubmissionSuccessMsg('Nộp bài tự nghiên cứu thành công! Dữ liệu đã được đồng bộ với hệ thống.');
     } catch (err: any) {
       setSubmissionErrorMsg(err.message || 'Lỗi khi lưu bài nộp');
     } finally {

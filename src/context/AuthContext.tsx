@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, SystemConfig } from '../types';
 import { UserService, initializeDatabase, subscribe, DEFAULT_LECTURER } from '../services/db';
+import { GoogleSyncService } from '../services/googleSync';
 
 const STUDENT_STORAGE_KEY = 'tl_active_student_v2';
 const TEACHER_MODE_KEY = 'tl_teacher_mode_active_v2';
@@ -27,6 +28,12 @@ interface AuthContextType {
   isStudentModalOpen: boolean;
   openStudentModal: () => void;
   closeStudentModal: () => void;
+  isStudentHistoryModalOpen: boolean;
+  openStudentHistoryModal: () => void;
+  closeStudentHistoryModal: () => void;
+  isGoogleSettingsModalOpen: boolean;
+  openGoogleSettingsModal: () => void;
+  closeGoogleSettingsModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [systemConfig, setSystemConfig] = useState<SystemConfig>(UserService.getConfig());
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+  const [isStudentHistoryModalOpen, setIsStudentHistoryModalOpen] = useState(false);
+  const [isGoogleSettingsModalOpen, setIsGoogleSettingsModalOpen] = useState(false);
 
   useEffect(() => {
     initializeDatabase();
@@ -61,8 +70,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSystemConfig(UserService.getConfig());
     });
 
+    // Auto-accumulate study time every 60 seconds
+    const studyTimer = setInterval(() => {
+      GoogleSyncService.addStudyMinutes(1);
+    }, 60000);
+
     return () => {
       unsubConfig();
+      clearInterval(studyTimer);
     };
   }, []);
 
@@ -106,6 +121,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isTeacherMode) {
       UserService.setCurrentUser(updated);
     }
+
+    // Real-time synchronization to Google Sheet
+    GoogleSyncService.syncStudent(updated).catch(err => {
+      console.warn('Google Sheet background sync notice:', err);
+    });
   };
 
   const loginTeacher = (username: string, pass: string): boolean => {
@@ -143,6 +163,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openStudentModal = () => setIsStudentModalOpen(true);
   const closeStudentModal = () => setIsStudentModalOpen(false);
 
+  const openStudentHistoryModal = () => setIsStudentHistoryModalOpen(true);
+  const closeStudentHistoryModal = () => setIsStudentHistoryModalOpen(false);
+
+  const openGoogleSettingsModal = () => setIsGoogleSettingsModalOpen(true);
+  const closeGoogleSettingsModal = () => setIsGoogleSettingsModalOpen(false);
+
   // currentUser depends on isTeacherMode
   const currentUser: UserProfile | null = isTeacherMode
     ? DEFAULT_LECTURER
@@ -171,6 +197,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isStudentModalOpen,
         openStudentModal,
         closeStudentModal,
+        isStudentHistoryModalOpen,
+        openStudentHistoryModal,
+        closeStudentHistoryModal,
+        isGoogleSettingsModalOpen,
+        openGoogleSettingsModal,
+        closeGoogleSettingsModal,
       }}
     >
       {children}

@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { MaterialItem, MaterialCategory, ValidityStatus } from '../../types';
 import { MaterialService, subscribe } from '../../services/db';
+import { GoogleSyncService } from '../../services/googleSync';
 import { DocumentViewerModal } from '../common/DocumentViewerModal';
 import { ConfirmModal } from '../common/ConfirmModal';
 
@@ -68,6 +69,29 @@ export const MaterialsView: React.FC = () => {
   const [formFileType, setFormFileType] = useState<'pdf' | 'docx' | 'pptx' | 'xlsx' | 'csv' | 'link'>('pdf');
   const [formStatus, setFormStatus] = useState<'published' | 'draft'>('published');
   const [formError, setFormError] = useState('');
+  const [fileBase64, setFileBase64] = useState<string>('');
+  const [isUploadingDrive, setIsUploadingDrive] = useState<boolean>(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFormFileName(file.name);
+    const sizeInMB = file.size / (1024 * 1024);
+    setFormFileSize(sizeInMB < 1 ? `${Math.round(file.size / 1024)} KB` : `${sizeInMB.toFixed(1)} MB`);
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'docx' || ext === 'doc') setFormFileType('docx');
+    else if (ext === 'pptx' || ext === 'ppt') setFormFileType('pptx');
+    else if (ext === 'xlsx' || ext === 'xls') setFormFileType('xlsx');
+    else setFormFileType('pdf');
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFileBase64(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const loadMaterials = () => {
     const data = isLecturer ? MaterialService.getAll() : MaterialService.getPublished();
@@ -119,7 +143,7 @@ export const MaterialsView: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleSaveMaterial = (e: React.FormEvent) => {
+  const handleSaveMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
       setFormError('Vui lòng nhập tên tài liệu.');
@@ -128,6 +152,28 @@ export const MaterialsView: React.FC = () => {
     if (!formDesc.trim()) {
       setFormError('Vui lòng nhập nội dung mô tả tài liệu.');
       return;
+    }
+
+    let finalDriveUrl = formOfficialUrl.trim();
+
+    // If a file was selected, upload directly to Google Drive
+    if (fileBase64 && GoogleSyncService.isConfigured()) {
+      setIsUploadingDrive(true);
+      try {
+        const driveRes = await GoogleSyncService.uploadFileToGoogleDrive({
+          fileName: formFileName.trim() || `${formTitle}.pdf`,
+          fileType: formFileType,
+          fileData: fileBase64,
+          chapter: formChapter.trim() || 'Chung',
+        });
+        if (driveRes && driveRes.viewUrl) {
+          finalDriveUrl = driveRes.viewUrl;
+        }
+      } catch (err) {
+        console.warn('Google Drive background upload notice:', err);
+      } finally {
+        setIsUploadingDrive(false);
+      }
     }
 
     MaterialService.save({
@@ -141,16 +187,18 @@ export const MaterialsView: React.FC = () => {
       effectiveDate: formEffectiveDate,
       validityStatus: formValidity,
       replacementNotes: formReplacement.trim(),
-      officialUrl: formOfficialUrl.trim(),
+      officialUrl: finalDriveUrl,
       fileName: formFileName.trim() || `${formTitle}.pdf`,
       fileSize: formFileSize || '1.0 MB',
       fileType: formFileType,
-      isSample: false, // User created is real data
+      fileData: fileBase64 || editingMaterial?.fileData,
+      isSample: false,
       status: formStatus,
       uploadedBy: currentUser?.uid || 'lecturer',
       uploadedByName: currentUser?.displayName || 'ThS. Ngô Thị Mai Anh',
     });
 
+    setFileBase64('');
     setIsEditorOpen(false);
   };
 
@@ -590,6 +638,27 @@ export const MaterialsView: React.FC = () => {
                   placeholder="Ví dụ: Được sửa đổi bởi Luật số 63/2020/QH14 ngày 18/06/2020"
                   className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs"
                 />
+              </div>
+
+              <div className="bg-blue-50/70 p-3.5 rounded-xl border border-blue-200 space-y-2">
+                <label className="block text-xs font-bold text-[#17365D] uppercase tracking-wider">
+                  Chọn tệp tải lên Google Drive (PDF, Word, PowerPoint, Excel...)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.txt"
+                  onChange={handleFileChange}
+                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#17365D] file:text-white hover:file:bg-[#245A91] cursor-pointer"
+                />
+                <p className="text-[11px] text-slate-500">
+                  Tệp tải lên sẽ được tự động đồng bộ vào thư mục Google Drive để học sinh truy cập và tải về.
+                </p>
+                {isUploadingDrive && (
+                  <p className="text-xs text-[#F28C28] font-bold animate-pulse flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#F28C28] animate-ping" />
+                    <span>Đang đồng bộ tệp lên Google Drive...</span>
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

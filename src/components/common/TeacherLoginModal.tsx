@@ -18,7 +18,7 @@ export const TeacherLoginModal: React.FC<TeacherLoginModalProps> = ({
   description = 'Phần Thống kê kết quả và Quản trị học phần chỉ dành riêng cho Giáo viên bộ môn.',
 }) => {
   const { loginTeacher } = useAuth();
-  const [username, setUsername] = useState('ngothimaianh');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -99,7 +99,7 @@ export const TeacherLoginModal: React.FC<TeacherLoginModalProps> = ({
                 required
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="ngothimaianh"
+                placeholder="Nhập tài khoản giáo viên"
                 className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#245A91] focus:border-transparent font-medium"
               />
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -116,7 +116,7 @@ export const TeacherLoginModal: React.FC<TeacherLoginModalProps> = ({
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Nhập mật khẩu (2026)"
+                placeholder="Nhập mật khẩu"
                 className="w-full pl-9 pr-12 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#245A91] focus:border-transparent font-medium"
               />
               <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />

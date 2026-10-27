@@ -24,7 +24,13 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
-  const { studentProfile, isLecturer, openTeacherModal, openStudentModal } = useAuth();
+  const {
+    studentProfile,
+    isLecturer,
+    openTeacherModal,
+    openStudentModal,
+    openStudentHistoryModal,
+  } = useAuth();
 
   const materials = MaterialService.getPublished();
   const assignments = AssignmentService.getPublished();
@@ -197,11 +203,18 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 space-y-2">
               <div className="text-[11px] text-slate-300 bg-white/5 rounded-xl p-2.5 border border-white/10 flex items-center gap-2">
                 <Building2 className="w-3.5 h-3.5 text-[#F28C28] shrink-0" />
                 <span className="truncate">Học phần: Lý luận Nhà nước và Pháp luật (3 TC)</span>
               </div>
+              <button
+                onClick={openStudentHistoryModal}
+                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-400/30"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Xem Điểm & Lịch sử học tập</span>
+              </button>
             </div>
           </div>
         </div>

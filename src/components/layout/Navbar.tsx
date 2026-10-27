@@ -12,6 +12,7 @@ import {
   Lock,
   LogOut,
   Edit3,
+  Cloud,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -40,6 +41,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     exitTeacherMode,
     openTeacherModal,
     openStudentModal,
+    openStudentHistoryModal,
+    openGoogleSettingsModal,
   } = useAuth();
 
   const handleNavClick = (tabId: ActiveTab) => {
@@ -145,6 +148,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           {isLecturer ? (
             /* TEACHER MODE ACTIVE */
             <div className="flex items-center gap-2.5">
+              <button
+                onClick={openGoogleSettingsModal}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-400/40 text-xs font-semibold text-emerald-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Cấu hình Google Sheet & Google Drive để đồng bộ thời gian thực"
+              >
+                <Cloud className="w-3.5 h-3.5 text-emerald-300" />
+                <span className="hidden sm:inline">Google Sync</span>
+              </button>
+
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-xs text-amber-200 shadow-sm">
                 <ShieldCheck className="w-4 h-4 text-[#F28C28]" />
                 <div>
@@ -167,6 +179,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             /* STUDENT MODE ACTIVE */
             <div className="flex items-center gap-2">
+              <button
+                onClick={openStudentHistoryModal}
+                className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-xs font-semibold text-emerald-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Xem kết quả điểm số & lịch sử học tập cá nhân"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-emerald-300" />
+                <span className="hidden sm:inline">Kết quả của tôi</span>
+              </button>
+
               <div
                 onClick={openStudentModal}
                 className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs cursor-pointer transition-colors group"

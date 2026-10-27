@@ -15,6 +15,8 @@ import { AnalyticsView } from './components/analytics/AnalyticsView';
 import { AnnouncementsView } from './components/announcements/AnnouncementsView';
 import { StudentGateModal } from './components/common/StudentGateModal';
 import { TeacherLoginModal } from './components/common/TeacherLoginModal';
+import { StudentHistoryModal } from './components/profile/StudentHistoryModal';
+import { GoogleSettingsModal } from './components/common/GoogleSettingsModal';
 import { AnnouncementService, subscribe } from './services/db';
 
 function MainContent() {
@@ -55,7 +57,7 @@ function MainContent() {
               </div>
               <h2 className="text-xl font-bold text-[#17365D]">Khu vực Thống kê kết quả dành riêng cho Giáo viên</h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Vui lòng đăng nhập với tài khoản giáo viên <strong>(ngothimaianh / 2026)</strong> để xem thống kê kết quả học tập và xuất bảng điểm.
+                Vui lòng đăng nhập với tài khoản giáo viên để xem thống kê kết quả học tập và xuất bảng điểm.
               </p>
               <div className="pt-2">
                 <TeacherLoginModal
@@ -81,6 +83,11 @@ function MainContent() {
         onClose={closeTeacherModal}
         onSuccess={() => setActiveTab('analytics')}
       />
+      {/* Student Personal Study History & Score Modal */}
+      <StudentHistoryModal />
+
+      {/* Google Sheet & Google Drive Real-time Sync Settings Modal */}
+      <GoogleSettingsModal />
     </div>
   );
 }
