@@ -17,6 +17,7 @@ import { StudentGateModal } from './components/common/StudentGateModal';
 import { TeacherLoginModal } from './components/common/TeacherLoginModal';
 import { StudentHistoryModal } from './components/profile/StudentHistoryModal';
 import { GoogleSettingsModal } from './components/common/GoogleSettingsModal';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AnnouncementService, subscribe } from './services/db';
 
 function MainContent() {
@@ -94,8 +95,10 @@ function MainContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <MainContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

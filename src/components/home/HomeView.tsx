@@ -14,6 +14,7 @@ import {
   Lock,
   Building2,
   Edit3,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialService, AssignmentService, QuizService, AnnouncementService } from '../../services/db';

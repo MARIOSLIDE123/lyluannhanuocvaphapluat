@@ -20,6 +20,8 @@ interface AuthContextType {
     studentClass: string;
     school: string;
   }) => void;
+  updateProfile: (data: Partial<UserProfile>) => void;
+  initializeFirstLecturer: (data: { fullName: string; email: string; faculty: string }) => void;
   loginTeacher: (username: string, pass: string) => boolean;
   exitTeacherMode: () => void;
   isTeacherModalOpen: boolean;
@@ -128,6 +130,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const updateProfile = (data: Partial<UserProfile>) => {
+    if (isTeacherMode) {
+      UserService.updateConfig({
+        lecturerName: data.displayName || systemConfig.lecturerName,
+        lecturerEmail: data.email || systemConfig.lecturerEmail,
+      });
+    } else {
+      saveStudentProfile({
+        fullName: data.displayName || studentProfile?.displayName || '',
+        studentId: data.studentId || studentProfile?.studentId || '',
+        studentClass: data.studentClass || studentProfile?.studentClass || '',
+        school: data.school || studentProfile?.school || 'Học viện Phòng cháy chữa cháy và CNCH',
+      });
+    }
+  };
+
+  const initializeFirstLecturer = (data: { fullName: string; email: string; faculty: string }) => {
+    UserService.updateConfig({
+      lecturerName: data.fullName,
+      lecturerEmail: data.email,
+      facultyName: data.faculty,
+      lecturerInitialized: true,
+    });
+  };
+
   const loginTeacher = (username: string, pass: string): boolean => {
     if (UserService.verifyTeacher(username, pass)) {
       setIsTeacherMode(true);
@@ -189,6 +216,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isStudent,
         isAuthenticated,
         saveStudentProfile,
+        updateProfile,
+        initializeFirstLecturer,
         loginTeacher,
         exitTeacherMode,
         isTeacherModalOpen,
