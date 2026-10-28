@@ -212,7 +212,7 @@ export const ProfileView: React.FC = () => {
           )}
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 flex items-center justify-between">
-            <span>Học phần đăng ký: <strong>Lý luận Nhà nước và Pháp luật</strong> (3 tín chỉ)</span>
+            <span>Học phần: <strong>Lý luận nhà nước và pháp luật</strong> (42 tiết - 2 tín chỉ)</span>
             <span className="text-[11px] font-mono text-slate-400">UID: {currentUser?.uid}</span>
           </div>
 
@@ -361,7 +361,7 @@ export const ProfileView: React.FC = () => {
       <ConfirmModal
         isOpen={showRestoreSampleConfirm}
         title="Khôi phục dữ liệu mẫu chuẩn"
-        message="Hệ thống sẽ nạp lại bộ tài liệu, nhiệm vụ tự nghiên cứu và ngân hàng câu hỏi trắc nghiệm mẫu cho môn Lý luận Nhà nước và Pháp luật."
+        message="Hệ thống sẽ nạp lại bộ tài liệu, nhiệm vụ tự nghiên cứu và ngân hàng câu hỏi trắc nghiệm mẫu cho học phần Lý luận nhà nước và pháp luật."
         confirmText="Khôi phục"
         onConfirm={() => {
           restoreDefaultSampleData();

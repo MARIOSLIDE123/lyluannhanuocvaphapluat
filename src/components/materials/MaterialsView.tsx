@@ -314,7 +314,7 @@ export const MaterialsView: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Thư viện số chuẩn hóa môn Lý luận Nhà nước và Pháp luật • Học viện PCCC & CNCH
+            Thư viện số chuẩn hóa học phần Lý luận nhà nước và pháp luật • Học viện PCCC & CNCH
           </p>
         </div>
 

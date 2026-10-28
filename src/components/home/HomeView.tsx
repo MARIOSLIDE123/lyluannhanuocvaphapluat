@@ -121,14 +121,29 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight font-serif mt-1 text-white uppercase leading-snug">
                 LÝ LUẬN NHÀ NƯỚC VÀ PHÁP LUẬT
               </h1>
-              <p className="text-sm md:text-base text-slate-300 mt-2 font-medium">
-                Giảng viên phụ trách: <span className="text-[#F28C28] font-bold">ThS. Ngô Thị Mai Anh</span>
-              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5 text-xs text-slate-200">
+                <p>
+                  Giảng viên phụ trách: <span className="text-[#F28C28] font-bold">ThS. Ngô Thị Mai Anh</span>
+                </p>
+                <p>
+                  Thời lượng: <span className="font-semibold text-amber-200">42 tiết (2 tín chỉ)</span>
+                </p>
+                <p>
+                  Đối tượng: <span className="font-semibold text-emerald-300">Học viên Hệ Đại học chính quy Công an</span>
+                </p>
+                <p>
+                  Địa chỉ liên hệ: <span className="text-slate-300">243 Khuất Duy Tiến, Đại Mỗ, Hà Nội</span>
+                </p>
+                <p className="sm:col-span-2 text-slate-300 flex flex-wrap items-center gap-3 pt-0.5">
+                  <span>Email: <strong className="text-white">maianhtq@gmail.com</strong></span>
+                  <span>•</span>
+                  <span>SĐT: <strong className="text-white">0973292966</strong></span>
+                </p>
+              </div>
             </div>
 
             <p className="text-slate-200 text-xs md:text-sm leading-relaxed max-w-4xl pt-2 border-t border-white/10">
-              Không gian học tập chuẩn hóa dành cho học viên học phần Lý luận Nhà nước và Pháp luật.
-              Cung cấp kho học liệu chính thống, nhiệm vụ tự nghiên cứu trước giờ lên lớp và bài ôn tập trắc nghiệm củng cố kiến thức.
+              Không gian học tập chuẩn hóa dành cho học viên học phần Lý luận Nhà nước và Pháp luật. Cung cấp kho học liệu chính thống, Nhiệm vụ tự nghiên cứu của học viên và bài tập củng cố kiến thức!
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -206,7 +221,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             <div className="pt-2 space-y-2">
               <div className="text-[11px] text-slate-300 bg-white/5 rounded-xl p-2.5 border border-white/10 flex items-center gap-2">
                 <Building2 className="w-3.5 h-3.5 text-[#F28C28] shrink-0" />
-                <span className="truncate">Học phần: Lý luận Nhà nước và Pháp luật (3 TC)</span>
+                <span className="truncate">Học phần: Lý luận nhà nước và pháp luật (42 tiết - 2 tín chỉ)</span>
               </div>
               <button
                 onClick={openStudentHistoryModal}

@@ -297,7 +297,7 @@ export const StudentHistoryModal: React.FC = () => {
         {/* Modal Footer */}
         <div className="p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs shrink-0">
           <span className="text-slate-500">
-            Học phần: <strong>Lý luận Nhà nước và Pháp luật</strong> (Khoa Luật - PCCC & CNCH)
+            Học phần: <strong>Lý luận nhà nước và pháp luật</strong> (42 tiết - 2 tín chỉ)
           </span>
           <button
             onClick={closeStudentHistoryModal}

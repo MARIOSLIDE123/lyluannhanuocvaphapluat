@@ -293,7 +293,7 @@ ${material.description}
                     1. MỤC ĐÍCH VÀ YÊU CẦU NGHIÊN CỨU
                   </h2>
                   <p>
-                    Tài liệu phục vụ công tác giảng dạy và học tập học phần <strong>Lý luận Nhà nước và Pháp luật</strong> dành cho học viên, sinh viên hệ Đại học Học viện PCCC & CNCH.
+                    Tài liệu phục vụ công tác giảng dạy và học tập học phần <strong>Lý luận nhà nước và pháp luật</strong> (42 tiết - 2 tín chỉ) dành cho học viên Hệ Đại học chính quy Công an Học viện PCCC & CNCH.
                     Yêu cầu người học tự đọc kỹ nội dung, đối chiếu với đề cương học phần và làm rõ các mối liên hệ thực tiễn trong công tác bảo đảm trật tự an toàn phòng cháy, chữa cháy và cứu nạn, cứu hộ.
                   </p>
 
@@ -321,7 +321,7 @@ ${material.description}
                 </div>
 
                 <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center text-xs text-slate-400 font-sans">
-                  <span>Học phần: Lý luận Nhà nước và Pháp luật</span>
+                  <span>Học phần: Lý luận nhà nước và pháp luật</span>
                   <span>Trang 1 / 1</span>
                 </div>
               </div>

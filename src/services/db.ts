@@ -85,10 +85,10 @@ function syncToServer() {
 const DEFAULT_CONFIG: SystemConfig = {
   lecturerInitialized: true,
   lecturerName: 'Ngô Thị Mai Anh',
-  lecturerEmail: 'ngomai.anh@pccc.edu.vn',
+  lecturerEmail: 'maianhtq@gmail.com',
   institutionName: 'Học viện Phòng cháy chữa cháy và cứu nạn cứu hộ',
   facultyName: 'Khoa Luật',
-  courseName: 'Lý luận Nhà nước và Pháp luật',
+  courseName: 'Lý luận nhà nước và pháp luật',
   courseEnglishName: 'Theory of State and Law',
   adminLock: true,
 };
@@ -96,10 +96,10 @@ const DEFAULT_CONFIG: SystemConfig = {
 // Default Lecturer User Profile
 export const DEFAULT_LECTURER: UserProfile = {
   uid: 'lecturer-ngo-mai-anh',
-  email: 'ngomai.anh@pccc.edu.vn',
+  email: 'maianhtq@gmail.com',
   displayName: 'ThS. Ngô Thị Mai Anh',
   role: 'lecturer',
-  course: 'Lý luận Nhà nước và Pháp luật',
+  course: 'Lý luận nhà nước và pháp luật',
   isFirstAdmin: true,
   createdAt: new Date().toISOString(),
 };
@@ -125,8 +125,8 @@ const SEED_ATTEMPTS: QuizAttempt[] = [];
 const SEED_ANNOUNCEMENTS: AnnouncementItem[] = [
   {
     id: 'ann-001',
-    title: 'Thông báo về kế hoạch giảng dạy học phần Lý luận Nhà nước và Pháp luật',
-    content: 'Chào các bạn sinh viên. Học phần Lý luận Nhà nước và Pháp luật gồm 45 tiết. Đề nghị các bạn nghiên cứu kỹ Đề cương học phần và hoàn thành các nhiệm vụ tự nghiên cứu trong Kho học liệu trước mỗi buổi học trên giảng đường.',
+    title: 'Thông báo về kế hoạch giảng dạy học phần Lý luận nhà nước và pháp luật',
+    content: 'Chào các bạn học viên. Học phần Lý luận nhà nước và pháp luật gồm 42 tiết (2 tín chỉ) dành cho học viên Hệ Đại học chính quy Công an. Đề nghị các bạn nghiên cứu kỹ Đề cương học phần và hoàn thành các nhiệm vụ tự nghiên cứu trong Kho học liệu trước mỗi buổi học trên giảng đường.',
     category: 'Lịch học',
     priority: 'urgent',
     isPinned: true,

@@ -92,7 +92,7 @@ export const StudentGateModal: React.FC = () => {
                 {isMandatory ? 'Thông tin học viên bắt buộc' : 'Cập nhật thông tin học viên'}
               </h3>
               <p className="text-xs text-slate-200 mt-0.5">
-                Học phần: Lý luận Nhà nước và Pháp luật
+                Học phần: Lý luận nhà nước và pháp luật (42 tiết - 2 tín chỉ)
               </p>
             </div>
           </div>

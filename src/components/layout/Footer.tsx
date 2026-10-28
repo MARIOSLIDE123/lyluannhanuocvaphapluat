@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
               <span className="font-bold text-sm font-serif">LÝ LUẬN NHÀ NƯỚC VÀ PHÁP LUẬT</span>
             </div>
             <p className="text-slate-300 text-xs leading-relaxed">
-              Hệ thống quản lý học tập trực tuyến học phần Lý luận Nhà nước và Pháp luật dành cho sinh viên hệ Đại học, phục vụ nghiên cứu trước giờ học, học liệu số và kiểm tra đánh giá quá trình.
+              Hệ thống quản lý học tập trực tuyến học phần Lý luận nhà nước và pháp luật dành cho học viên Hệ Đại học chính quy Công an, phục vụ nghiên cứu học liệu số, nhiệm vụ tự nghiên cứu và ôn tập trắc nghiệm củng cố kiến thức.
             </p>
             <div className="mt-4 flex items-center gap-2 text-slate-300">
               <ShieldCheck className="w-4 h-4 text-[#F28C28]" />
@@ -31,13 +31,13 @@ export const Footer: React.FC = () => {
                 <strong className="text-white">Giảng viên phụ trách:</strong> ThS. Ngô Thị Mai Anh
               </li>
               <li>
-                <strong className="text-white">Bộ môn:</strong> Pháp luật đại cương & Lý luận Nhà nước
+                <strong className="text-white">Học phần:</strong> Lý luận nhà nước và pháp luật
               </li>
               <li>
-                <strong className="text-white">Thời lượng:</strong> 45 tiết (3 tín chỉ)
+                <strong className="text-white">Thời lượng:</strong> 42 tiết (2 tín chỉ)
               </li>
               <li>
-                <strong className="text-white">Đối tượng:</strong> Sinh viên các lớp Đại học chính quy & Liên thông
+                <strong className="text-white">Đối tượng:</strong> Học viên Hệ Đại học chính quy Công an
               </li>
             </ul>
           </div>
@@ -49,15 +49,15 @@ export const Footer: React.FC = () => {
             <div className="space-y-2.5 text-slate-300 text-xs">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                <span>Số 243 Khuất Duy Tiến, Thanh Xuân, Hà Nội</span>
+                <span>243 Khuất Duy Tiến, Đại Mỗ, Hà Nội</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>ngomai.anh@pccc.edu.vn</span>
+                <span>maianhtq@gmail.com</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>Phòng Giáo vụ - Khoa Luật: (024) 3858 3936</span>
+                <span>0973292966</span>
               </div>
             </div>
           </div>
