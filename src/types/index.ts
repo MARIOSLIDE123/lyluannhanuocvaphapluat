@@ -16,13 +16,16 @@ export interface UserProfile {
 }
 
 export type MaterialCategory =
-  | '01_syllabus' // 01. Đề cương học phần
-  | '02_textbooks' // 02. Giáo trình và bài giảng
-  | '03_legal_docs' // 03. Văn bản quy phạm pháp luật
-  | '04_chapter_materials' // 04. Học liệu theo chương, bài
-  | '05_references' // 05. Tài liệu tham khảo
-  | '06_case_studies' // 06. Tình huống và tài liệu nghiên cứu
-  | '07_supplementary'; // 07. Tài liệu bổ sung
+  | '01_syllabus' // 1. Đề cương chi tiết học phần
+  | '02_main_textbooks' // 2. Tài liệu chính
+  | '02_textbooks' // Alias tương thích cho Tài liệu chính
+  | '03_references' // 3. Tài liệu tham khảo
+  | '03_legal_docs' // Alias tương thích
+  | '04_discussion_topics' // 4. Hệ thống câu hỏi thảo luận
+  | '04_chapter_materials' // Alias tương thích
+  | '05_case_studies' // 5. Hệ thống bài tập tình huống
+  | '06_case_studies' // Alias tương thích
+  | '07_supplementary';
 
 export type ValidityStatus = 'active' | 'expired' | 'amended' | 'unverified';
 

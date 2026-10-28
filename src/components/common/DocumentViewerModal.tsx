@@ -311,13 +311,44 @@ ${material.description}
                   </p>
 
                   <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-4">
-                    3. TÀI LIỆU VÀ CĂN CỨ THAM KHẢO
+                    3. DANH MỤC HỌC LIỆU
                   </h2>
-                  <ul className="list-disc pl-5 space-y-1 font-sans text-xs text-slate-600">
-                    <li>Hiến pháp nước Cộng hòa xã hội chủ nghĩa Việt Nam năm 2013.</li>
-                    <li>Luật Ban hành văn bản quy phạm pháp luật năm 2015 (sửa đổi, bổ sung năm 2020).</li>
-                    <li>Giáo trình Lý luận Nhà nước và Pháp luật - Học viện Phòng cháy chữa cháy và Cứu nạn cứu hộ.</li>
-                  </ul>
+                  <ol className="list-decimal pl-5 space-y-1 font-sans text-xs text-slate-600">
+                    <li>Đề cương chi tiết học phần</li>
+                    <li>Tài liệu chính</li>
+                    <li>Tài liệu tham khảo</li>
+                    <li>Hệ thống câu hỏi thảo luận</li>
+                    <li>Hệ thống bài tập tình huống</li>
+                  </ol>
+
+                  <h2 className="text-base font-bold text-[#17365D] font-sans border-b border-slate-200 pb-1 pt-4">
+                    4. MỤC TIÊU HỌC PHẦN
+                  </h2>
+                  <div className="space-y-3 font-sans text-xs text-slate-700">
+                    <div>
+                      <strong className="text-[#17365D]">4.1. Về kiến thức:</strong>
+                      <ul className="list-disc pl-5 mt-1 space-y-1 text-slate-600">
+                        <li>Trang bị cho sinh viên những kiến thức cơ bản về nguồn gốc, bản chất, chức năng, hình thức, kiểu, vai trò của nhà nước và pháp luật; bộ máy nhà nước; mối quan hệ giữa nhà nước, pháp luật với các hiện tượng xã hội khác; quá trình vận động và phát triển của nhà nước và pháp luật; quy phạm pháp luật; quan hệ pháp luật; thực hiện pháp luật; ý thức pháp luật; vi phạm pháp luật và trách nhiệm pháp lí; ngành luật Hiến pháp.</li>
+                        <li>Xây dựng cho sinh viên cách tư duy khoa học và phương pháp nhận thức khoa học về những vấn đề nhà nước và pháp luật; giúp sinh viên vận dụng những kiến thức đã học để phân tích và giải thích hiện tượng nhà nước và pháp luật trong thực tế.</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong className="text-[#17365D]">4.2. Về kỹ năng:</strong>
+                      <ul className="list-disc pl-5 mt-1 space-y-1 text-slate-600">
+                        <li>Khả năng vận dụng những kiến thức đã học vào nghiên cứu các học phần thuộc khối kiến thức cơ sở và kiến thức ngành trong chương trình đào tạo.</li>
+                        <li>Khả năng vận dụng các kiến thức đã học vào giải quyết các vấn đề của thực tiễn nhà nước và pháp luật;</li>
+                        <li>Năng lực thu thập thông tin, kĩ năng tổng hợp, hệ thống hoá các vấn đề trong mối quan hệ tổng thể; kĩ năng so sánh, phân tích, bình luận, đánh giá các vấn đề của lí luận nhà nước pháp luật;</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong className="text-[#17365D]">4.3. Về năng lực tự chủ và trách nhiệm:</strong>
+                      <ul className="list-disc pl-5 mt-1 space-y-1 text-slate-600">
+                        <li>Xây dựng năng lực nhìn nhận, đánh giá khách quan các hiện tượng chính trị, pháp lí trong đời sống xã hội cho học viên;</li>
+                        <li>Hình thành tính chủ động, tự tin, bản lĩnh cho học viên;</li>
+                        <li>Hình thành ở học viên kĩ năng sống có trách nhiệm và thái độ thượng tôn pháp luật.</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center text-xs text-slate-400 font-sans">

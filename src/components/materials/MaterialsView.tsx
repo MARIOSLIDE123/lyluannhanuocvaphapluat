@@ -33,14 +33,21 @@ import { ConfirmModal } from '../common/ConfirmModal';
 
 const CATEGORIES: { id: MaterialCategory | 'all'; label: string; count?: number }[] = [
   { id: 'all', label: 'Tất cả học liệu' },
-  { id: '01_syllabus', label: '01. Đề cương học phần' },
-  { id: '02_textbooks', label: '02. Giáo trình và bài giảng' },
-  { id: '03_legal_docs', label: '03. Văn bản quy phạm pháp luật' },
-  { id: '04_chapter_materials', label: '04. Học liệu theo chương, bài' },
-  { id: '05_references', label: '05. Tài liệu tham khảo' },
-  { id: '06_case_studies', label: '06. Tình huống và tài liệu nghiên cứu' },
-  { id: '07_supplementary', label: '07. Tài liệu bổ sung' },
+  { id: '01_syllabus', label: '1. Đề cương chi tiết học phần' },
+  { id: '02_main_textbooks', label: '2. Tài liệu chính' },
+  { id: '03_references', label: '3. Tài liệu tham khảo' },
+  { id: '04_discussion_topics', label: '4. Hệ thống câu hỏi thảo luận' },
+  { id: '05_case_studies', label: '5. Hệ thống bài tập tình huống' },
 ];
+
+export const getCategoryDisplayName = (cat: MaterialCategory | string): string => {
+  if (cat === '01_syllabus') return '1. Đề cương chi tiết học phần';
+  if (cat === '02_main_textbooks' || cat === '02_textbooks') return '2. Tài liệu chính';
+  if (cat === '03_references' || cat === '03_legal_docs') return '3. Tài liệu tham khảo';
+  if (cat === '04_discussion_topics' || cat === '04_chapter_materials') return '4. Hệ thống câu hỏi thảo luận';
+  if (cat === '05_case_studies' || cat === '06_case_studies' || cat === '07_supplementary') return '5. Hệ thống bài tập tình huống';
+  return cat;
+};
 
 export const MaterialsView: React.FC = () => {
   const { isLecturer, currentUser, openTeacherModal } = useAuth();
@@ -257,9 +264,19 @@ export const MaterialsView: React.FC = () => {
     }
   };
 
+  const isMatchCategory = (itemCategory: MaterialCategory, sel: MaterialCategory | 'all'): boolean => {
+    if (sel === 'all') return true;
+    if (sel === '01_syllabus') return itemCategory === '01_syllabus';
+    if (sel === '02_main_textbooks') return itemCategory === '02_main_textbooks' || (itemCategory as any) === '02_textbooks';
+    if (sel === '03_references') return itemCategory === '03_references' || (itemCategory as any) === '03_legal_docs';
+    if (sel === '04_discussion_topics') return itemCategory === '04_discussion_topics' || (itemCategory as any) === '04_chapter_materials';
+    if (sel === '05_case_studies') return itemCategory === '05_case_studies' || (itemCategory as any) === '06_case_studies' || (itemCategory as any) === '07_supplementary';
+    return itemCategory === sel;
+  };
+
   // Filtered List
   const filteredMaterials = materials.filter(item => {
-    if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
+    if (selectedCategory !== 'all' && !isMatchCategory(item.category, selectedCategory)) return false;
     if (selectedValidity !== 'all' && item.validityStatus !== selectedValidity) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -365,7 +382,7 @@ export const MaterialsView: React.FC = () => {
                 const catCount =
                   cat.id === 'all'
                     ? materials.length
-                    : materials.filter(m => m.category === cat.id).length;
+                    : materials.filter(m => isMatchCategory(m.category, cat.id)).length;
 
                 return (
                   <button
@@ -476,6 +493,9 @@ export const MaterialsView: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#17365D] uppercase">
                         {mat.chapter}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-[#17365D] border border-slate-200">
+                        {getCategoryDisplayName(mat.category)}
                       </span>
                       {getValidityBadge(mat.validityStatus)}
                       {mat.isSample && (

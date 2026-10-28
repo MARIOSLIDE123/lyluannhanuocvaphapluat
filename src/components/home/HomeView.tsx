@@ -295,42 +295,132 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
 
       {/* Syllabus & Academic Guide Overview (Widescreen 16:9 layout) */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <div className="xl:col-span-8 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-            <BookOpen className="w-5 h-5 text-[#17365D]" />
-            <h3 className="font-bold text-base text-[#17365D]">
-              MỤC TIÊU VÀ YÊU CẦU ĐÀO TẠO HỌC PHẦN
-            </h3>
+        <div className="xl:col-span-8 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <BookOpen className="w-5 h-5 text-[#17365D]" />
+              <h3 className="font-bold text-base text-[#17365D] uppercase tracking-wide">
+                4. MỤC TIÊU HỌC PHẦN
+              </h3>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#17365D] border border-blue-200">
+              Đề cương chi tiết học phần
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-600">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-              <span className="font-bold text-slate-800 flex items-center gap-1.5 text-sm">
-                <GraduationCap className="w-4 h-4 text-[#245A91]" />
-                Chuẩn đầu ra kiến thức
-              </span>
-              <p className="leading-relaxed">
-                Nắm vững hệ thống phạm trù, quy luật cơ bản về nguồn gốc, bản chất, bộ máy nhà nước và bản chất, hình thức, quy phạm pháp luật, vi phạm pháp luật và pháp chế XHCN.
-              </p>
+          <div className="space-y-4">
+            {/* 4.1. Về kiến thức */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#17365D]">
+                <GraduationCap className="w-4 h-4 text-[#F28C28]" />
+                <h4>4.1. Về kiến thức</h4>
+              </div>
+              <p className="text-xs text-slate-500 italic">Học phần này nhằm:</p>
+              <ul className="space-y-2 text-xs text-slate-700 leading-relaxed list-disc pl-5">
+                <li>
+                  Trang bị cho sinh viên những kiến thức cơ bản về nguồn gốc, bản chất, chức năng, hình thức, kiểu, vai trò của nhà nước và pháp luật; bộ máy nhà nước; mối quan hệ giữa nhà nước, pháp luật với các hiện tượng xã hội khác; quá trình vận động và phát triển của nhà nước và pháp luật; quy phạm pháp luật; quan hệ pháp luật; thực hiện pháp luật; ý thức pháp luật; vi phạm pháp luật và trách nhiệm pháp lí; ngành luật Hiến pháp.
+                </li>
+                <li>
+                  Xây dựng cho sinh viên cách tư duy khoa học và phương pháp nhận thức khoa học về những vấn đề nhà nước và pháp luật; giúp sinh viên vận dụng những kiến thức đã học để phân tích và giải thích hiện tượng nhà nước và pháp luật trong thực tế.
+                </li>
+              </ul>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-              <span className="font-bold text-slate-800 flex items-center gap-1.5 text-sm">
-                <Award className="w-4 h-4 text-[#F28C28]" />
-                Vận dụng thực tiễn PCCC & CNCH
-              </span>
-              <p className="leading-relaxed">
-                Vận dụng quan điểm, đường lối của Đảng và quy định pháp luật vào công tác quản lý nhà nước về phòng cháy, chữa cháy và cứu nạn, cứu hộ trong toàn quốc.
-              </p>
+            {/* 4.2. Về kỹ năng */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#17365D]">
+                <Award className="w-4 h-4 text-[#245A91]" />
+                <h4>4.2. Về kỹ năng</h4>
+              </div>
+              <p className="text-xs text-slate-500 italic">Học phần này nhằm làm hình thành ở sinh viên:</p>
+              <ul className="space-y-2 text-xs text-slate-700 leading-relaxed list-disc pl-5">
+                <li>
+                  Khả năng vận dụng những kiến thức đã học vào nghiên cứu các học phần thuộc khối kiến thức cơ sở và kiến thức ngành trong chương trình đào tạo.
+                </li>
+                <li>
+                  Khả năng vận dụng các kiến thức đã học vào giải quyết các vấn đề của thực tiễn nhà nước và pháp luật;
+                </li>
+                <li>
+                  Năng lực thu thập thông tin, kĩ năng tổng hợp, hệ thống hoá các vấn đề trong mối quan hệ tổng thể; kĩ năng so sánh, phân tích, bình luận, đánh giá các vấn đề của lí luận nhà nước pháp luật;
+                </li>
+              </ul>
+            </div>
+
+            {/* 4.3. Về năng lực tự chủ và trách nhiệm */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#17365D]">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <h4>4.3. Về năng lực tự chủ và trách nhiệm</h4>
+              </div>
+              <p className="text-xs text-slate-500 italic">Học phần này nhằm:</p>
+              <ul className="space-y-2 text-xs text-slate-700 leading-relaxed list-disc pl-5">
+                <li>
+                  Xây dựng năng lực nhìn nhận, đánh giá khách quan các hiện tượng chính trị, pháp lí trong đời sống xã hội cho học viên;
+                </li>
+                <li>
+                  Hình thành tính chủ động, tự tin, bản lĩnh cho học viên;
+                </li>
+                <li>
+                  Hình thành ở học viên kĩ năng sống có trách nhiệm và thái độ thượng tôn pháp luật.
+                </li>
+              </ul>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-900 leading-relaxed">
-            <strong className="text-blue-950">Quy trình học tập tương tác: </strong>
-            (1) Tải và nghiên cứu tài liệu trong <strong>Kho học liệu</strong>;
-            (2) Thực hiện câu hỏi chuẩn bị trong mục <strong>Tự nghiên cứu trước giờ học</strong>;
-            (3) Thảo luận trực tiếp trên giảng đường cùng giảng viên;
-            (4) Hoàn thành <strong>Ôn tập trắc nghiệm</strong> để củng cố kiến thức và ghi nhận điểm số.
+          {/* DANH MỤC HỌC LIỆU Banner */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-[#F28C28]" />
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#17365D]">
+                  DANH MỤC HỌC LIỆU
+                </h4>
+              </div>
+              <button
+                onClick={() => onNavigate('materials')}
+                className="text-xs text-[#245A91] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <span>Mở Kho học liệu</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1 text-xs font-semibold">
+              <div
+                onClick={() => onNavigate('materials')}
+                className="p-3 rounded-lg bg-white border border-blue-100 shadow-2xs text-[#17365D] hover:border-[#245A91] hover:shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span className="w-6 h-6 rounded-full bg-[#17365D] text-white flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                <span className="leading-tight">Đề cương chi tiết học phần</span>
+              </div>
+              <div
+                onClick={() => onNavigate('materials')}
+                className="p-3 rounded-lg bg-white border border-blue-100 shadow-2xs text-[#17365D] hover:border-[#245A91] hover:shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span className="w-6 h-6 rounded-full bg-[#17365D] text-white flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                <span className="leading-tight">Tài liệu chính</span>
+              </div>
+              <div
+                onClick={() => onNavigate('materials')}
+                className="p-3 rounded-lg bg-white border border-blue-100 shadow-2xs text-[#17365D] hover:border-[#245A91] hover:shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span className="w-6 h-6 rounded-full bg-[#17365D] text-white flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                <span className="leading-tight">Tài liệu tham khảo</span>
+              </div>
+              <div
+                onClick={() => onNavigate('materials')}
+                className="p-3 rounded-lg bg-white border border-blue-100 shadow-2xs text-[#17365D] hover:border-[#245A91] hover:shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span className="w-6 h-6 rounded-full bg-[#17365D] text-white flex items-center justify-center text-xs font-bold shrink-0">4</span>
+                <span className="leading-tight">Hệ thống câu hỏi thảo luận</span>
+              </div>
+              <div
+                onClick={() => onNavigate('materials')}
+                className="p-3 rounded-lg bg-white border border-blue-100 shadow-2xs text-[#17365D] hover:border-[#245A91] hover:shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span className="w-6 h-6 rounded-full bg-[#17365D] text-white flex items-center justify-center text-xs font-bold shrink-0">5</span>
+                <span className="leading-tight">Hệ thống bài tập tình huống</span>
+              </div>
+            </div>
           </div>
         </div>
 
