@@ -339,10 +339,57 @@ export const UserService = {
   },
 };
 
+// Blacklist các tài liệu rác / trùng lặp đã bị xóa hoặc xóa vĩnh viễn
+export const PERMANENTLY_EXCLUDED_MATERIAL_IDS = new Set([
+  'mat-drive-1YZRp4G_gNUMF-MIWxoKwJAtL3ePJX53w',
+  'mat-drive-12765TDY5T5R9V5oyjFTATCcPOwsX2IuO',
+  '1YZRp4G_gNUMF-MIWxoKwJAtL3ePJX53w',
+  '12765TDY5T5R9V5oyjFTATCcPOwsX2IuO',
+]);
+
+const DELETED_MATERIALS_KEY = 'tl_deleted_materials_v1';
+
+export function getDeletedMaterialIds(): Set<string> {
+  const base = new Set(PERMANENTLY_EXCLUDED_MATERIAL_IDS);
+  try {
+    const raw = localStorage.getItem(DELETED_MATERIALS_KEY);
+    if (raw) {
+      const parsed: string[] = JSON.parse(raw);
+      parsed.forEach(id => base.add(id));
+    }
+  } catch {
+    // Ignore
+  }
+  return base;
+}
+
+export function saveDeletedMaterialId(id: string): void {
+  try {
+    const current = getDeletedMaterialIds();
+    current.add(id);
+    localStorage.setItem(DELETED_MATERIALS_KEY, JSON.stringify(Array.from(current)));
+  } catch {
+    // Ignore
+  }
+}
+
 // ================= MATERIALS REPOSITORY =================
 export const MaterialService = {
   getAll(): MaterialItem[] {
-    return loadStorage<MaterialItem[]>(STORAGE_KEYS.MATERIALS, SEED_MATERIALS);
+    const raw = loadStorage<MaterialItem[]>(STORAGE_KEYS.MATERIALS, SEED_MATERIALS);
+    const deletedIds = getDeletedMaterialIds();
+    const filtered = raw.filter(m => {
+      if (!m || !m.id) return false;
+      if (deletedIds.has(m.id)) return false;
+      if (m.officialUrl && Array.from(deletedIds).some(delId => m.officialUrl && m.officialUrl.includes(delId))) {
+        return false;
+      }
+      return true;
+    });
+    if (filtered.length !== raw.length) {
+      saveStorage(STORAGE_KEYS.MATERIALS, filtered);
+    }
+    return filtered;
   },
   getPublished(): MaterialItem[] {
     return this.getAll().filter(m => m.status === 'published');
@@ -386,6 +433,14 @@ export const MaterialService = {
     return savedItem;
   },
   delete(id: string): void {
+    saveDeletedMaterialId(id);
+    const item = this.getById(id);
+    if (item?.officialUrl) {
+      const match = item.officialUrl.match(/[-\w]{25,}/);
+      if (match) {
+        saveDeletedMaterialId(match[0]);
+      }
+    }
     const list = this.getAll().filter(m => m.id !== id);
     saveStorage(STORAGE_KEYS.MATERIALS, list);
     notify('materials');
@@ -399,10 +454,20 @@ export const MaterialService = {
   },
   mergeRemoteMaterials(remoteList: MaterialItem[]): MaterialItem[] {
     if (!Array.isArray(remoteList) || remoteList.length === 0) return this.getAll();
+    const deletedIds = getDeletedMaterialIds();
+    const cleanRemoteList = remoteList.filter(item => {
+      if (!item || !item.id) return false;
+      if (deletedIds.has(item.id)) return false;
+      if (item.officialUrl && Array.from(deletedIds).some(delId => item.officialUrl && item.officialUrl.includes(delId))) {
+        return false;
+      }
+      return true;
+    });
+
     const current = this.getAll();
     let hasChanges = false;
 
-    remoteList.forEach(remoteItem => {
+    cleanRemoteList.forEach(remoteItem => {
       const idx = current.findIndex(
         m => m.id === remoteItem.id || (m.officialUrl && remoteItem.officialUrl && m.officialUrl === remoteItem.officialUrl)
       );

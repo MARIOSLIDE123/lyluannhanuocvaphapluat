@@ -433,20 +433,37 @@ function doPost(e) {
       });
     }
 
-    // 8. Xóa tài liệu khỏi Google Sheet
+    // 8. Xóa tài liệu khỏi Google Sheet (Cả KhoHocLieu và TaiLieuGoogleDrive)
     if (action === "deleteMaterial") {
+      var matId = (data.id || "").toString().trim();
+      var cleanFileId = matId.replace("mat-drive-", "");
+
+      // 8.1. Xóa khỏi KhoHocLieu
       var matSheet = ss.getSheetByName("KhoHocLieu");
       if (matSheet) {
-        var matId = (data.id || "").toString().trim();
         var rows = matSheet.getDataRange().getValues();
-        for (var i = 1; i < rows.length; i++) {
-          if (rows[i][0] && rows[i][0].toString().trim() === matId) {
+        for (var i = rows.length - 1; i >= 1; i--) {
+          var rowId = (rows[i][0] || "").toString().trim();
+          var rowUrl = (rows[i][10] || "").toString();
+          if (rowId === matId || (cleanFileId && (rowId.indexOf(cleanFileId) > -1 || rowUrl.indexOf(cleanFileId) > -1))) {
             matSheet.deleteRow(i + 1);
-            break;
           }
         }
       }
-      return jsonResponse({ success: true, message: "Đã xóa tài liệu khỏi Google Sheet!" });
+
+      // 8.2. Xóa khỏi TaiLieuGoogleDrive
+      var driveSheet = ss.getSheetByName("TaiLieuGoogleDrive");
+      if (driveSheet) {
+        var dRows = driveSheet.getDataRange().getValues();
+        for (var j = dRows.length - 1; j >= 1; j--) {
+          var dFileId = (dRows[j][4] || "").toString().trim();
+          var dViewUrl = (dRows[j][5] || "").toString();
+          if (dFileId === matId || dFileId === cleanFileId || (cleanFileId && (dFileId.indexOf(cleanFileId) > -1 || dViewUrl.indexOf(cleanFileId) > -1))) {
+            driveSheet.deleteRow(j + 1);
+          }
+        }
+      }
+      return jsonResponse({ success: true, message: "Đã xóa tài liệu khỏi Google Sheet và Drive!" });
     }
     
     return jsonResponse({ success: false, error: "Hành động không hợp lệ: " + action });
