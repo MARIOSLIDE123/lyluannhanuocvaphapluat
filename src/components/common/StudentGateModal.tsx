@@ -148,7 +148,7 @@ export const StudentGateModal: React.FC = () => {
                 required
                 value={studentId}
                 onChange={e => setStudentId(e.target.value)}
-                placeholder="Ví dụ: SV202401"
+                placeholder="Ví dụ: SV202601"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#245A91] focus:border-transparent uppercase font-mono font-semibold"
               />
             </div>

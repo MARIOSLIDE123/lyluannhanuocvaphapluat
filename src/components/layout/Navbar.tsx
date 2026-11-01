@@ -85,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
             <span className="hidden md:inline text-slate-500">|</span>
             <span className="hidden md:inline font-mono text-[#F28C28]">
-              Học kỳ I • Năm học 2024 - 2025
+              Học kỳ I • Năm học 2026 - 2027
             </span>
           </div>
         </div>

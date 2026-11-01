@@ -64,7 +64,7 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="border-t border-white/10 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
-          <p>© 2024 - 2025 Khoa Luật - Học viện Phòng cháy chữa cháy và Cứu nạn cứu hộ. Bảo lưu mọi quyền.</p>
+          <p>© 2026 - 2027 Khoa Luật - Học viện Phòng cháy chữa cháy và Cứu nạn cứu hộ. Bảo lưu mọi quyền.</p>
           <p className="italic">Theory of State and Law • Academic E-Learning Portal</p>
         </div>
       </div>
