@@ -132,6 +132,10 @@ function doGet(e) {
     var ss = getSpreadsheet();
     return jsonResponse(getMaterialsFromSheet(ss));
   }
+  if (action === "getLearningData" || action === "getAnalytics" || action === "getStudents") {
+    var ss = getSpreadsheet();
+    return jsonResponse(getLearningDataFromSheet(ss));
+  }
 
   return ContentService.createTextOutput(JSON.stringify({
     status: "active",
@@ -465,6 +469,11 @@ function doPost(e) {
       }
       return jsonResponse({ success: true, message: "Đã xóa tài liệu khỏi Google Sheet và Drive!" });
     }
+
+    // 9. Lấy dữ liệu học tập tổng hợp từ Google Sheet (Học viên, Kết quả trắc nghiệm, Bài nộp)
+    if (action === "getLearningData" || action === "getAnalytics" || action === "getStudents") {
+      return jsonResponse(getLearningDataFromSheet(ss));
+    }
     
     return jsonResponse({ success: false, error: "Hành động không hợp lệ: " + action });
   } catch (err) {
@@ -637,6 +646,180 @@ function getMaterialsFromSheet(ss) {
     };
   } catch (err) {
     return { success: false, error: err.toString(), materials: [] };
+  }
+}
+
+/**
+ * Trích xuất toàn bộ dữ liệu học tập (Học viên, Điểm trắc nghiệm, Bài nộp) từ Google Sheet
+ */
+function getLearningDataFromSheet(ss) {
+  try {
+    if (!ss) ss = getSpreadsheet();
+    
+    // 1. HocVien
+    var studentSheet = ss ? ss.getSheetByName("HocVien") : null;
+    var students = [];
+    if (studentSheet) {
+      var rows = studentSheet.getDataRange().getValues();
+      // Row 0 là tiêu đề: "Thời gian đăng ký", "Mã sinh viên", "Họ và tên", "Lớp", "Trường", "Email", "Lần cập nhật cuối"
+      for (var i = 1; i < rows.length; i++) {
+        var r = rows[i];
+        if (!r[1] && !r[2]) continue;
+        var sId = (r[1] || "").toString().trim().toUpperCase();
+        var sName = (r[2] || "").toString().trim();
+        var sClass = (r[3] || "").toString().trim().toUpperCase();
+        var sSchool = (r[4] || "Học viện PCCC & CNCH").toString().trim();
+        var sEmail = (r[5] || (sId ? sId.toLowerCase() + "@pccc.edu.vn" : "")).toString().trim();
+        var regTime = (r[0] || "").toString();
+        var upTime = (r[6] || "").toString();
+        
+        students.push({
+          uid: "student-" + (sId || i),
+          studentId: sId,
+          displayName: sName,
+          studentClass: sClass,
+          school: sSchool,
+          email: sEmail,
+          role: "student",
+          course: "Lý luận Nhà nước và Pháp luật",
+          createdAt: regTime || new Date().toISOString(),
+          updatedAt: upTime || regTime || new Date().toISOString()
+        });
+      }
+    }
+
+    // 2. KetQuaKiemTra (Quiz Attempts)
+    var quizSheet = ss ? ss.getSheetByName("KetQuaKiemTra") : null;
+    var attempts = [];
+    if (quizSheet) {
+      var qRows = quizSheet.getDataRange().getValues();
+      // Headers: "Thời gian làm bài", "Mã sinh viên", "Họ và tên", "Lớp", "Trường", "Bài kiểm tra", "Chương", "Điểm số (/10)", "Tỷ lệ đúng (%)", "Số câu đúng", "Số câu sai", "Thời gian làm (giây)"
+      for (var j = 1; j < qRows.length; j++) {
+        var qr = qRows[j];
+        if (!qr[1] && !qr[5]) continue;
+        var qStudentId = (qr[1] || "").toString().trim().toUpperCase();
+        var qStudentName = (qr[2] || "").toString().trim();
+        var qClass = (qr[3] || "").toString().trim().toUpperCase();
+        var qTitle = (qr[5] || "").toString().trim();
+        var qChapter = (qr[6] || "").toString().trim();
+        var scoreVal = parseFloat(qr[7]);
+        if (isNaN(scoreVal)) scoreVal = 0;
+        var pctVal = parseFloat(qr[8]);
+        if (isNaN(pctVal)) pctVal = Math.round(scoreVal * 10);
+        var corr = parseInt(qr[9]) || 0;
+        var wrg = parseInt(qr[10]) || 0;
+        var dur = parseInt(qr[11]) || 0;
+        var compTime = (qr[0] || "").toString();
+
+        attempts.push({
+          id: "att-sheet-" + j,
+          quizId: qTitle,
+          quizTitle: qTitle,
+          quizChapter: qChapter,
+          studentUid: "student-" + qStudentId,
+          studentId: qStudentId,
+          studentName: qStudentName,
+          studentClass: qClass,
+          startedAt: compTime,
+          completedAt: compTime,
+          durationSeconds: dur,
+          answers: {},
+          score: scoreVal,
+          totalPoints: 10,
+          percentage: pctVal,
+          correctCount: corr,
+          wrongCount: wrg,
+          unansweredCount: 0,
+          status: "completed",
+          attemptNumber: 1
+        });
+
+        // Đảm bảo sinh viên này có trong danh sách students nếu chưa đăng ký ở sheet HocVien
+        var studentExists = students.some(function(s) { return s.studentId === qStudentId; });
+        if (!studentExists && qStudentId) {
+          students.push({
+            uid: "student-" + qStudentId,
+            studentId: qStudentId,
+            displayName: qStudentName || qStudentId,
+            studentClass: qClass || "Chưa phân lớp",
+            school: (qr[4] || "Học viện PCCC & CNCH").toString().trim(),
+            email: qStudentId.toLowerCase() + "@pccc.edu.vn",
+            role: "student",
+            course: "Lý luận Nhà nước và Pháp luật",
+            createdAt: compTime || new Date().toISOString(),
+            updatedAt: compTime || new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    // 3. BaiNopTuNghienCuu (Submissions)
+    var subSheet = ss ? ss.getSheetByName("BaiNopTuNghienCuu") : null;
+    var submissions = [];
+    if (subSheet) {
+      var sRows = subSheet.getDataRange().getValues();
+      // Headers: "Thời gian nộp", "Mã sinh viên", "Họ và tên", "Lớp", "Trường", "Tên nhiệm vụ", "Nội dung bài làm", "Tên file đính kèm"
+      for (var k = 1; k < sRows.length; k++) {
+        var sr = sRows[k];
+        if (!sr[1] && !sr[5]) continue;
+        var subStudentId = (sr[1] || "").toString().trim().toUpperCase();
+        var subStudentName = (sr[2] || "").toString().trim();
+        var subClass = (sr[3] || "").toString().trim().toUpperCase();
+        var subTask = (sr[5] || "").toString().trim();
+        var subContent = (sr[6] || "").toString();
+        var subFile = (sr[7] || "").toString();
+        var subTime = (sr[0] || "").toString();
+
+        submissions.push({
+          id: "sub-sheet-" + k,
+          assignmentId: subTask,
+          assignmentTitle: subTask,
+          studentUid: "student-" + subStudentId,
+          studentId: subStudentId,
+          studentName: subStudentName,
+          studentClass: subClass,
+          textContent: subContent,
+          attachedFileName: subFile,
+          submittedAt: subTime,
+          isLate: false,
+          version: 1,
+          status: "submitted"
+        });
+
+        // Đảm bảo sinh viên này có trong danh sách students nếu chưa đăng ký ở sheet HocVien
+        var subStudentExists = students.some(function(s) { return s.studentId === subStudentId; });
+        if (!subStudentExists && subStudentId) {
+          students.push({
+            uid: "student-" + subStudentId,
+            studentId: subStudentId,
+            displayName: subStudentName || subStudentId,
+            studentClass: subClass || "Chưa phân lớp",
+            school: (sr[4] || "Học viện PCCC & CNCH").toString().trim(),
+            email: subStudentId.toLowerCase() + "@pccc.edu.vn",
+            role: "student",
+            course: "Lý luận Nhà nước và Pháp luật",
+            createdAt: subTime || new Date().toISOString(),
+            updatedAt: subTime || new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      students: students,
+      quizAttempts: attempts,
+      submissions: submissions,
+      totalStudents: students.length,
+      totalAttempts: attempts.length,
+      totalSubmissions: submissions.length,
+      timestamp: new Date().toISOString()
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: "Lỗi đọc dữ liệu từ Google Sheet: " + err.toString()
+    };
   }
 }
 

@@ -233,6 +233,39 @@ export const GoogleSyncService = {
   },
 
   /**
+   * Tải toàn bộ dữ liệu học tập (Học viên, Điểm trắc nghiệm, Bài nộp) từ Google Sheet về ứng dụng
+   */
+  async fetchLearningDataOnline(): Promise<{
+    success: boolean;
+    students?: any[];
+    quizAttempts?: any[];
+    submissions?: any[];
+    totalStudents?: number;
+    totalAttempts?: number;
+    totalSubmissions?: number;
+    error?: string;
+  }> {
+    const url = this.getScriptUrl();
+    if (!url) return { success: false, error: 'Chưa cấu hình URL Google Apps Script' };
+
+    try {
+      const res = await this.sendPost({ action: 'getLearningData' });
+      if (res && res.success) {
+        return res;
+      }
+      // Fallback action getAnalytics
+      const fallback = await this.sendPost({ action: 'getAnalytics' });
+      if (fallback && fallback.success) {
+        return fallback;
+      }
+      return res || fallback || { success: false, error: 'Không nhận được phản hồi từ Google Sheet' };
+    } catch (err: any) {
+      console.warn('Lỗi tải dữ liệu học tập từ Google Sheet:', err);
+      return { success: false, error: err?.message || 'Lỗi kết nối máy chủ Google' };
+    }
+  },
+
+  /**
    * 5. Ghi nhận thời gian học và lịch sử hoạt động
    */
   recordLocalActivity(payload: Record<string, any>) {

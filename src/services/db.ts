@@ -337,6 +337,54 @@ export const UserService = {
     });
     return Array.from(set).sort();
   },
+  mergeRemoteStudents(remoteStudents: any[]): UserProfile[] {
+    if (!Array.isArray(remoteStudents) || remoteStudents.length === 0) return this.getUsers();
+    const current = this.getUsers();
+    let hasChanges = false;
+
+    remoteStudents.forEach(remote => {
+      const sId = (remote.studentId || '').trim().toUpperCase();
+      const sName = (remote.displayName || remote.studentName || '').trim();
+      if (!sId && !sName) return;
+
+      const idx = current.findIndex(
+        u => (sId && u.studentId && u.studentId.trim().toUpperCase() === sId) ||
+             (u.uid && remote.uid && u.uid === remote.uid)
+      );
+
+      if (idx >= 0) {
+        current[idx] = {
+          ...current[idx],
+          displayName: sName || current[idx].displayName,
+          studentClass: (remote.studentClass || current[idx].studentClass || '').trim().toUpperCase(),
+          school: remote.school || current[idx].school || 'Học viện PCCC & CNCH',
+          email: remote.email || current[idx].email || (sId ? `${sId.toLowerCase()}@pccc.edu.vn` : ''),
+          updatedAt: remote.updatedAt || new Date().toISOString(),
+        };
+        hasChanges = true;
+      } else {
+        current.push({
+          uid: remote.uid || `student-${sId || Date.now()}`,
+          displayName: sName || sId,
+          studentId: sId,
+          studentClass: (remote.studentClass || 'Chưa phân lớp').trim().toUpperCase(),
+          school: remote.school || 'Học viện PCCC & CNCH',
+          email: remote.email || (sId ? `${sId.toLowerCase()}@pccc.edu.vn` : ''),
+          role: 'student',
+          course: 'Lý luận Nhà nước và Pháp luật',
+          createdAt: remote.createdAt || new Date().toISOString(),
+          updatedAt: remote.updatedAt || new Date().toISOString(),
+        });
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      saveStorage(STORAGE_KEYS.USERS, current);
+      notify('users');
+    }
+    return current;
+  },
 };
 
 // Blacklist các tài liệu rác / trùng lặp đã bị xóa hoặc xóa vĩnh viễn
@@ -623,6 +671,49 @@ export const AssignmentService = {
     notify('submissions');
     return list[idx];
   },
+  mergeRemoteSubmissions(remoteSubmissions: any[]): SubmissionItem[] {
+    if (!Array.isArray(remoteSubmissions) || remoteSubmissions.length === 0) return this.getSubmissions();
+    const current = this.getSubmissions();
+    let hasChanges = false;
+
+    remoteSubmissions.forEach(raw => {
+      const sId = (raw.studentId || '').trim().toUpperCase();
+      if (!sId) return;
+
+      const timeKey = (raw.submittedAt || '').trim();
+      const taskKey = (raw.assignmentId || raw.assignmentTitle || '').trim();
+      const exists = current.some(
+        s => (s.studentId && s.studentId.trim().toUpperCase() === sId) &&
+             (s.assignmentId === taskKey || (s as any).assignmentTitle === taskKey) &&
+             (timeKey ? s.submittedAt === timeKey : true)
+      );
+
+      if (!exists) {
+        const newSub: SubmissionItem = {
+          id: raw.id || `sub-sync-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          assignmentId: taskKey || 'assignment-general',
+          studentUid: raw.studentUid || `student-${sId}`,
+          studentName: raw.studentName || sId,
+          studentId: sId,
+          studentClass: (raw.studentClass || '').trim().toUpperCase(),
+          textContent: raw.textContent || '',
+          attachedFileName: raw.attachedFileName || '',
+          submittedAt: raw.submittedAt || new Date().toISOString(),
+          isLate: false,
+          version: 1,
+          status: 'submitted',
+        };
+        current.push(newSub);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      saveStorage(STORAGE_KEYS.SUBMISSIONS, current);
+      notify('submissions');
+    }
+    return current;
+  },
 };
 
 // ================= QUIZZES & QUESTIONS =================
@@ -810,6 +901,68 @@ export const QuizService = {
     notify('attempts');
     return attempt;
   },
+  mergeRemoteAttempts(remoteAttempts: any[]): QuizAttempt[] {
+    if (!Array.isArray(remoteAttempts) || remoteAttempts.length === 0) return this.getAttempts();
+    const current = this.getAttempts();
+    const quizzes = this.getPublishedQuizzes();
+    let hasChanges = false;
+
+    remoteAttempts.forEach(raw => {
+      const sId = (raw.studentId || '').trim().toUpperCase();
+      if (!sId) return;
+
+      // Find matching quiz by ID or Title
+      const rawTitle = (raw.quizTitle || raw.quizId || '').trim().toLowerCase();
+      const matchedQuiz = quizzes.find(
+        q => q.id === raw.quizId ||
+             q.title.trim().toLowerCase() === rawTitle ||
+             rawTitle.includes(q.title.trim().toLowerCase()) ||
+             q.title.trim().toLowerCase().includes(rawTitle)
+      );
+      const quizId = matchedQuiz ? matchedQuiz.id : (raw.quizId || (quizzes[0]?.id || 'quiz-chuong-1-bo-1'));
+
+      const timeKey = (raw.completedAt || raw.startedAt || '').trim();
+      const scoreVal = typeof raw.score === 'number' ? raw.score : parseFloat(raw.score) || 0;
+
+      const exists = current.some(
+        a => (a.studentId && a.studentId.trim().toUpperCase() === sId) &&
+             a.quizId === quizId &&
+             (timeKey ? (a.completedAt === timeKey || a.startedAt === timeKey) : Math.abs(a.score - scoreVal) < 0.05)
+      );
+
+      if (!exists) {
+        const pctVal = typeof raw.percentage === 'number' ? raw.percentage : Math.round(scoreVal * 10);
+        const newAttempt: QuizAttempt = {
+          id: raw.id || `att-sync-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          quizId,
+          studentUid: raw.studentUid || `student-${sId}`,
+          studentName: raw.studentName || raw.displayName || sId,
+          studentId: sId,
+          studentClass: (raw.studentClass || '').trim().toUpperCase(),
+          startedAt: raw.startedAt || raw.completedAt || new Date().toISOString(),
+          completedAt: raw.completedAt || raw.startedAt || new Date().toISOString(),
+          durationSeconds: raw.durationSeconds || 0,
+          answers: raw.answers || {},
+          score: scoreVal,
+          totalPoints: 10,
+          percentage: pctVal,
+          correctCount: raw.correctCount || Math.round((pctVal / 100) * 10),
+          wrongCount: raw.wrongCount || (10 - Math.round((pctVal / 100) * 10)),
+          unansweredCount: raw.unansweredCount || 0,
+          status: 'completed',
+          attemptNumber: 1,
+        };
+        current.push(newAttempt);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      saveStorage(STORAGE_KEYS.ATTEMPTS, current);
+      notify('attempts');
+    }
+    return current;
+  },
 };
 
 // ================= ANNOUNCEMENTS =================
@@ -911,9 +1064,16 @@ export const AnalyticsService = {
 
       let academicStatus: 'Xuất sắc' | 'Đạt' | 'Cần cố gắng' | 'Chưa nộp bài' = 'Chưa nộp bài';
       if (studentSubs.length > 0 || studentAttempts.length > 0) {
-        if (avgQuizScore >= 8.5 && completionRate >= 80) academicStatus = 'Xuất sắc';
-        else if (avgQuizScore >= 5.0 && completionRate >= 50) academicStatus = 'Đạt';
-        else academicStatus = 'Cần cố gắng';
+        if (assignments.length > 0) {
+          if (avgQuizScore >= 8.5 && completionRate >= 80) academicStatus = 'Xuất sắc';
+          else if (avgQuizScore >= 5.0 && completionRate >= 50) academicStatus = 'Đạt';
+          else academicStatus = 'Cần cố gắng';
+        } else {
+          // Khi chưa có bài tập nộp, xếp loại dựa trên điểm trắc nghiệm củng cố
+          if (avgQuizScore >= 8.5) academicStatus = 'Xuất sắc';
+          else if (avgQuizScore >= 5.0) academicStatus = 'Đạt';
+          else academicStatus = 'Cần cố gắng';
+        }
       }
 
       return {

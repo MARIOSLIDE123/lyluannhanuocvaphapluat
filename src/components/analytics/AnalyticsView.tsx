@@ -18,10 +18,33 @@ import {
   ShieldCheck,
   User,
   KeyRound,
+  RefreshCw,
+  Database,
+  Cloud,
+  Code2,
+  Upload,
+  Copy,
+  Check,
+  ExternalLink,
+  ChevronRight,
+  X,
+  FileText,
+  Sparkles,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { AnalyticsService, UserService, QuizService, AssignmentService, subscribe } from '../../services/db';
+import {
+  AnalyticsService,
+  UserService,
+  QuizService,
+  AssignmentService,
+  subscribe,
+  exportFullDatabase,
+  importFullDatabase,
+} from '../../services/db';
+import { GoogleSyncService } from '../../services/googleSync';
 import { exportGradebookToExcel } from '../../services/excel';
+import { APPS_SCRIPT_CODE } from '../../data/appsScriptCode';
 
 export const AnalyticsView: React.FC = () => {
   const { isLecturer, currentUser, loginTeacher } = useAuth();
@@ -35,6 +58,21 @@ export const AnalyticsView: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [searchStudent, setSearchStudent] = useState<string>('');
   const [selectedStudentDetail, setSelectedStudentDetail] = useState<any | null>(null);
+
+  // Sync state with Google Sheet
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+  const [syncStatus, setSyncStatus] = useState<{
+    type: 'success' | 'warning' | 'error';
+    text: string;
+  } | null>(null);
+
+  // Modals
+  const [showScriptModal, setShowScriptModal] = useState<boolean>(false);
+  const [showImportModal, setShowImportModal] = useState<boolean>(false);
+  const [pasteText, setPasteText] = useState<string>('');
+  const [importNotice, setImportNotice] = useState<string>('');
+  const [isCopiedScript, setIsCopiedScript] = useState<boolean>(false);
 
   // Question analysis
   const [quizzes, setQuizzes] = useState<any[]>([]);
@@ -58,6 +96,69 @@ export const AnalyticsView: React.FC = () => {
     }
   };
 
+  const syncOnlineData = async () => {
+    if (!GoogleSyncService.isConfigured()) {
+      setSyncStatus({
+        type: 'warning',
+        text: 'Chưa cấu hình URL Google Apps Script. Bấm "Cấu hình Google Sync" ở góc trên để kết nối.',
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus(null);
+
+    try {
+      const res = await GoogleSyncService.fetchLearningDataOnline();
+      if (res && res.success) {
+        let countStudents = 0;
+        let countAttempts = 0;
+        let countSubs = 0;
+
+        if (Array.isArray(res.students) && res.students.length > 0) {
+          UserService.mergeRemoteStudents(res.students);
+          countStudents = res.students.length;
+        }
+        if (Array.isArray(res.quizAttempts) && res.quizAttempts.length > 0) {
+          QuizService.mergeRemoteAttempts(res.quizAttempts);
+          countAttempts = res.quizAttempts.length;
+        }
+        if (Array.isArray(res.submissions) && res.submissions.length > 0) {
+          AssignmentService.mergeRemoteSubmissions(res.submissions);
+          countSubs = res.submissions.length;
+        }
+
+        const now = new Date().toLocaleTimeString('vi-VN');
+        setLastSyncedTime(now);
+        setSyncStatus({
+          type: 'success',
+          text: `Đồng bộ thành công từ Google Sheet lúc ${now}: ${countStudents} sinh viên, ${countAttempts} lượt làm trắc nghiệm, ${countSubs} bài nộp.`,
+        });
+        loadData();
+      } else {
+        const err = res?.error || 'Không nhận được dữ liệu';
+        if (err.includes('Hành động không hợp lệ') || err.includes('Invalid action')) {
+          setSyncStatus({
+            type: 'warning',
+            text: 'Google Apps Script trên tài khoản của bạn cần cập nhật thêm hàm lấy dữ liệu tự động. Hãy bấm "Cập nhật mã Apps Script" để xem hướng dẫn 1 phút, hoặc bấm "Dán / Nhập dữ liệu từ Sheet" để cập nhật ngay lập tức.',
+          });
+        } else {
+          setSyncStatus({
+            type: 'error',
+            text: `Không thể đồng bộ từ Google Sheet: ${err}`,
+          });
+        }
+      }
+    } catch (err: any) {
+      setSyncStatus({
+        type: 'error',
+        text: `Lỗi kết nối đồng bộ: ${err.message || 'Lỗi mạng'}`,
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
     const unsubSub = subscribe('submissions', loadData);
@@ -69,6 +170,17 @@ export const AnalyticsView: React.FC = () => {
       unsubUser();
     };
   }, [selectedAnalysisQuizId]);
+
+  // Tự động đồng bộ từ Google Sheet khi mở màn hình Thống kê kết quả
+  useEffect(() => {
+    if (isLecturer) {
+      syncOnlineData();
+      const interval = setInterval(() => {
+        syncOnlineData();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isLecturer]);
 
   const uniqueClasses = UserService.getUniqueClasses();
 
@@ -86,6 +198,198 @@ export const AnalyticsView: React.FC = () => {
 
   const handleExportGradebook = () => {
     exportGradebookToExcel(filteredStudents);
+  };
+
+  const handleParsePastedData = () => {
+    setImportNotice('');
+    const raw = pasteText.trim();
+    if (!raw) {
+      setImportNotice('Vui lòng dán dữ liệu sao chép từ Google Sheet hoặc tệp JSON vào khung.');
+      return;
+    }
+
+    try {
+      // 1. JSON parse
+      if (raw.startsWith('{') || raw.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(raw);
+          let sCount = 0;
+          let aCount = 0;
+          let subCount = 0;
+          if (Array.isArray(parsed)) {
+            if (parsed.length > 0 && ('score' in parsed[0] || 'quizTitle' in parsed[0])) {
+              QuizService.mergeRemoteAttempts(parsed);
+              aCount = parsed.length;
+            } else {
+              UserService.mergeRemoteStudents(parsed);
+              sCount = parsed.length;
+            }
+          } else if (typeof parsed === 'object') {
+            if (parsed.students) {
+              UserService.mergeRemoteStudents(parsed.students);
+              sCount = parsed.students.length;
+            }
+            if (parsed.quizAttempts || parsed.attempts) {
+              QuizService.mergeRemoteAttempts(parsed.quizAttempts || parsed.attempts);
+              aCount = (parsed.quizAttempts || parsed.attempts).length;
+            }
+            if (parsed.submissions) {
+              AssignmentService.mergeRemoteSubmissions(parsed.submissions);
+              subCount = parsed.submissions.length;
+            }
+          }
+          setImportNotice(`Đã nạp thành công từ JSON: ${sCount} học viên, ${aCount} kết quả trắc nghiệm, ${subCount} bài nộp.`);
+          setPasteText('');
+          loadData();
+          return;
+        } catch {
+          // fallback to TSV
+        }
+      }
+
+      // 2. TSV / CSV parse (directly copied from Google Sheet)
+      const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const newStudents: any[] = [];
+      const newAttempts: any[] = [];
+      const newSubs: any[] = [];
+
+      lines.forEach(line => {
+        const parts = line.split(/\t/).map(p => p.trim());
+        if (parts.length < 2) return;
+
+        // Skip header lines
+        const first = parts[0].toLowerCase();
+        const second = (parts[1] || '').toLowerCase();
+        if (
+          first.includes('thời gian') ||
+          first.includes('mã') ||
+          second.includes('mã sinh viên') ||
+          second.includes('họ và tên')
+        ) {
+          return;
+        }
+
+        // Case A: KetQuaKiemTra (usually 6-12 columns)
+        const maybeScore = parts[7] !== undefined ? parseFloat(parts[7]) : NaN;
+        const qTitleRaw = parts[5] || '';
+        const isQuizRow =
+          parts.length >= 6 &&
+          (!isNaN(maybeScore) ||
+            qTitleRaw.toLowerCase().includes('chương') ||
+            qTitleRaw.toLowerCase().includes('bộ câu hỏi') ||
+            qTitleRaw.toLowerCase().includes('quy phạm') ||
+            qTitleRaw.toLowerCase().includes('quan hệ') ||
+            qTitleRaw.toLowerCase().includes('vi phạm') ||
+            qTitleRaw.toLowerCase().includes('thực hiện'));
+
+        if (isQuizRow) {
+          const sId = (parts[1] || '').toUpperCase();
+          const sName = parts[2] || sId;
+          const sClass = (parts[3] || '').toUpperCase();
+          const qTitle = parts[5] || '';
+          const score = !isNaN(maybeScore) ? maybeScore : 0;
+          const pct = parts[8] ? parseFloat(parts[8]) : Math.round(score * 10);
+
+          newAttempts.push({
+            studentId: sId,
+            studentName: sName,
+            studentClass: sClass,
+            quizTitle: qTitle,
+            score,
+            percentage: pct,
+            correctCount: parts[9] ? parseInt(parts[9]) : Math.round((pct / 100) * 10),
+            wrongCount: parts[10] ? parseInt(parts[10]) : 10 - Math.round((pct / 100) * 10),
+            durationSeconds: parts[11] ? parseInt(parts[11]) : 0,
+            completedAt: parts[0] || new Date().toISOString(),
+          });
+
+          newStudents.push({
+            studentId: sId,
+            displayName: sName,
+            studentClass: sClass,
+            school: parts[4] || 'Học viện PCCC & CNCH',
+          });
+          return;
+        }
+
+        // Case B: BaiNopTuNghienCuu
+        if (
+          parts.length >= 6 &&
+          (parts[5].toLowerCase().includes('nhiệm vụ') || parts[5].toLowerCase().includes('bài tập'))
+        ) {
+          const sId = (parts[1] || '').toUpperCase();
+          const sName = parts[2] || sId;
+          const sClass = (parts[3] || '').toUpperCase();
+          newSubs.push({
+            studentId: sId,
+            studentName: sName,
+            studentClass: sClass,
+            assignmentTitle: parts[5],
+            textContent: parts[6] || '',
+            attachedFileName: parts[7] || '',
+            submittedAt: parts[0] || new Date().toISOString(),
+          });
+          newStudents.push({
+            studentId: sId,
+            displayName: sName,
+            studentClass: sClass,
+            school: parts[4] || 'Học viện PCCC & CNCH',
+          });
+          return;
+        }
+
+        // Case C: HocVien
+        const sId = (parts[1] || parts[0]).toUpperCase();
+        const sName = parts[2] || parts[1] || sId;
+        const sClass = (parts[3] || '').toUpperCase();
+        if (sId && sName) {
+          newStudents.push({
+            studentId: sId,
+            displayName: sName,
+            studentClass: sClass,
+            school: parts[4] || 'Học viện PCCC & CNCH',
+            email: parts[5] || '',
+          });
+        }
+      });
+
+      if (newStudents.length > 0) UserService.mergeRemoteStudents(newStudents);
+      if (newAttempts.length > 0) QuizService.mergeRemoteAttempts(newAttempts);
+      if (newSubs.length > 0) AssignmentService.mergeRemoteSubmissions(newSubs);
+
+      if (newStudents.length === 0 && newAttempts.length === 0 && newSubs.length === 0) {
+        setImportNotice('Không nhận diện được định dạng dữ liệu. Hãy sao chép các hàng từ sheet HocVien hoặc KetQuaKiemTra.');
+      } else {
+        setImportNotice(`Đã nạp thành công: ${newStudents.length} học viên, ${newAttempts.length} kết quả trắc nghiệm, ${newSubs.length} bài nộp.`);
+        setPasteText('');
+        loadData();
+      }
+    } catch (e: any) {
+      setImportNotice('Lỗi phân tích cú pháp: ' + e.message);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const text = ev.target?.result as string;
+        const parsed = JSON.parse(text);
+        const ok = importFullDatabase(parsed);
+        if (ok) {
+          setImportNotice('Đã khôi phục dữ liệu từ tệp sao lưu thành công!');
+          loadData();
+        } else {
+          setImportNotice('Tệp sao lưu không đúng định dạng.');
+        }
+      } catch {
+        setImportNotice('Lỗi đọc tệp sao lưu JSON.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleTeacherLogin = (e: React.FormEvent) => {
@@ -182,8 +486,8 @@ export const AnalyticsView: React.FC = () => {
   // ================= LECTURER ANALYTICS DASHBOARD =================
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Top Header */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Header & Actions Toolbar */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-[#17365D]" />
@@ -191,20 +495,112 @@ export const AnalyticsView: React.FC = () => {
               BẢNG THỐNG KÊ & THEO DÕI HỌC TẬP
             </h1>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Tổng hợp dữ liệu thực tế từ bài tự nghiên cứu và kết quả ôn tập trắc nghiệm của sinh viên
-          </p>
+          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
+            <span>Tổng hợp kết quả học tập từ Google Sheet & Hệ thống ôn tập trắc nghiệm</span>
+            {lastSyncedTime && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Đồng bộ lần cuối: {lastSyncedTime}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
-        <button
-          onClick={handleExportGradebook}
-          disabled={studentProgressList.length === 0}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span>Xuất sổ điểm toàn khóa (.xlsx)</span>
-        </button>
+        {/* Toolbar Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={syncOnlineData}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#17365D] hover:bg-[#245A91] text-white text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Đồng bộ kết quả mới nhất trực tiếp từ Google Sheet"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-amber-400' : 'text-[#F28C28]'}`} />
+            <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ Google Sheet'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setImportNotice('');
+              setShowImportModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95"
+            title="Dán dữ liệu sao chép từ Google Sheet hoặc nạp tệp sao lưu"
+          >
+            <Database className="w-4 h-4" />
+            <span>Dán / Nhập từ Sheet</span>
+          </button>
+
+          <button
+            onClick={() => setShowScriptModal(true)}
+            className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
+            title="Xem mã Google Apps Script 2 chiều & hướng dẫn cài đặt"
+          >
+            <Code2 className="w-4 h-4 text-[#245A91]" />
+            <span>Mã Apps Script</span>
+          </button>
+
+          <button
+            onClick={handleExportGradebook}
+            disabled={studentProgressList.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Xuất sổ điểm toàn khóa (.xlsx)</span>
+          </button>
+        </div>
       </div>
+
+      {/* Sync Status Feedback Banner */}
+      {syncStatus && (
+        <div
+          className={`p-4 rounded-2xl border text-xs flex items-start justify-between gap-3 animate-fadeIn ${
+            syncStatus.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : syncStatus.type === 'warning'
+              ? 'bg-amber-50 border-amber-200 text-amber-900'
+              : 'bg-red-50 border-red-200 text-red-900'
+          }`}
+        >
+          <div className="flex items-start gap-2.5">
+            {syncStatus.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />}
+            {syncStatus.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />}
+            {syncStatus.type === 'error' && <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />}
+            <div className="leading-relaxed">
+              <span className="font-semibold">{syncStatus.text}</span>
+              {syncStatus.type === 'warning' && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setShowScriptModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shadow-xs cursor-pointer"
+                  >
+                    <Code2 className="w-3.5 h-3.5" />
+                    <span>Cập nhật mã Google Apps Script (1 phút)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setImportNotice('');
+                      setShowImportModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 font-bold text-[11px] cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    <span>Dán dữ liệu trực tiếp từ Sheet</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setSyncStatus(null)}
+            className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* KPI Overview Cards */}
       {metrics && (
@@ -555,6 +951,191 @@ export const AnalyticsView: React.FC = () => {
                   className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 cursor-pointer"
                 >
                   Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 1: Nhập dữ liệu thủ công / Dán từ Google Sheet */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+            <div className="bg-gradient-to-r from-[#17365D] to-[#245A91] text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-[#F28C28]" />
+                <div>
+                  <h3 className="font-bold text-base font-serif">Dán & Nhập dữ liệu từ Google Sheet</h3>
+                  <p className="text-[11px] text-slate-300">Cập nhật tức thì dữ liệu học tập vào hệ thống</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="text-slate-300 hover:text-white cursor-pointer text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-blue-900 leading-relaxed space-y-1.5">
+                <div className="font-bold text-[#17365D] flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-[#F28C28]" />
+                  <span>Cách lấy dữ liệu nhanh nhất:</span>
+                </div>
+                <p>
+                  Mở Google Sheet của bạn &gt; Vào sheet <strong>KetQuaKiemTra</strong> hoặc <strong>HocVien</strong> &gt; Quét chọn (bôi đen) các hàng dữ liệu &gt; Nhấn <strong>Ctrl+C</strong> và dán (<strong>Ctrl+V</strong>) vào khung dưới đây. Hệ thống sẽ tự động phân tích và đưa vào bảng thống kê ngay lập tức!
+                </p>
+              </div>
+
+              {importNotice && (
+                <div
+                  className={`p-3.5 rounded-xl border font-medium flex items-center gap-2 ${
+                    importNotice.includes('thành công')
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{importNotice}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Khung dán dữ liệu (Hàng từ Google Sheet hoặc JSON)
+                </label>
+                <textarea
+                  rows={7}
+                  value={pasteText}
+                  onChange={e => setPasteText(e.target.value)}
+                  placeholder="Dán các hàng dữ liệu sao chép từ Google Sheet (Ctrl+V) vào đây..."
+                  className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#245A91] bg-slate-50"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer text-xs transition">
+                  <Upload className="w-3.5 h-3.5 text-[#245A91]" />
+                  <span>Nạp tệp JSON sao lưu</span>
+                  <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowImportModal(false)}
+                    className="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleParsePastedData}
+                    className="px-5 py-2 rounded-xl bg-[#17365D] hover:bg-[#245A91] text-white font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4 text-[#F28C28]" />
+                    <span>Nạp vào Thống kê</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2: Hướng dẫn & Sao chép mã Google Apps Script 2 chiều */}
+      {showScriptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+            <div className="bg-gradient-to-r from-[#17365D] to-[#245A91] text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Code2 className="w-5 h-5 text-[#F28C28]" />
+                <div>
+                  <h3 className="font-bold text-base font-serif">Mã Google Apps Script Tự Động 2 Chiều</h3>
+                  <p className="text-[11px] text-slate-300">Tự động kéo điểm và bài làm học viên về bảng thống kê</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowScriptModal(false)}
+                className="text-slate-300 hover:text-white cursor-pointer text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-950 space-y-2">
+                <div className="font-bold text-emerald-900 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>3 Bước Cập Nhật Nhanh (Chỉ mất 1 phút):</span>
+                </div>
+                <ol className="list-decimal pl-5 space-y-1.5 text-emerald-900 leading-relaxed">
+                  <li>
+                    Mở bảng Google Sheet của bạn &gt; Chọn menu <strong>Tiện ích mở rộng (Extensions)</strong> &gt; <strong>Apps Script</strong>.
+                  </li>
+                  <li>
+                    Bấm nút <strong>"Sao chép toàn bộ mã nguồn"</strong> ở dưới &gt; Xóa sạch mã cũ trong Apps Script và <strong>Dán đè mã mới này vào</strong> &gt; Bấm biểu tượng <strong>Lưu (Ctrl+S)</strong>.
+                  </li>
+                  <li>
+                    Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Quản lý bản triển khai (Manage deployments)</strong> &gt; Bấm vào biểu tượng <strong>Cây bút (Chỉnh sửa)</strong> &gt; Mục Phiên bản chọn <strong>Phiên bản mới (New version)</strong> &gt; Bấm nút <strong>Triển khai (Deploy)</strong>.
+                  </li>
+                </ol>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <span className="text-slate-600 font-medium">Mã nguồn phiên bản mới nhất đã tích hợp hàm <code>getLearningDataFromSheet</code>:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const blob = new Blob([APPS_SCRIPT_CODE], { type: 'text/javascript' });
+                      const u = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = u;
+                      a.download = 'GoogleAppsScript_Code.js';
+                      a.click();
+                      URL.revokeObjectURL(u);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer shadow-xs"
+                  >
+                    <Upload className="w-3.5 h-3.5 rotate-180 text-slate-500" />
+                    <span>Tải tệp .js</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(APPS_SCRIPT_CODE);
+                      setIsCopiedScript(true);
+                      setTimeout(() => setIsCopiedScript(false), 3000);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#17365D] hover:bg-[#245A91] text-white font-bold text-xs cursor-pointer shadow-xs transition"
+                  >
+                    {isCopiedScript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#F28C28]" />}
+                    <span>{isCopiedScript ? 'Đã sao chép!' : 'Sao chép toàn bộ mã'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute top-2 right-2 text-[10px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded">
+                  GoogleAppsScript_Code.js (khoảng 800 dòng)
+                </div>
+                <pre className="p-4 rounded-xl bg-slate-900 text-slate-200 font-mono text-[11px] overflow-auto max-h-60 leading-relaxed border border-slate-800">
+                  {APPS_SCRIPT_CODE.slice(0, 2000)}
+                  {'\n\n/* ... (còn hơn 600 dòng tiếp theo - bấm Sao chép để lấy toàn bộ) ... */'}
+                </pre>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowScriptModal(false)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold cursor-pointer"
+                >
+                  Đóng hướng dẫn
                 </button>
               </div>
             </div>
