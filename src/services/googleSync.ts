@@ -335,21 +335,37 @@ export const GoogleSyncService = {
    * Kiểm tra kết nối Web App Apps Script
    */
   async testConnection(testUrl?: string): Promise<{ success: boolean; message: string }> {
-    const url = testUrl || this.getScriptUrl();
-    if (!url) {
+    const rawUrl = (testUrl || this.getScriptUrl()).trim();
+    if (!rawUrl) {
       return { success: false, message: 'Chưa nhập Web App URL của Google Apps Script.' };
     }
 
+    if (rawUrl.includes('/macros/library/d/')) {
+      return {
+        success: false,
+        message:
+          'Đường dẫn bạn vừa nhập là liên kết Thư viện (Library) của Google Apps Script, không thể dùng làm Web App API để truyền nhận dữ liệu. Vui lòng vào Apps Script > Bấm [Triển khai] > [Tùy chọn triển khai mới] > Chọn loại [Ứng dụng web] > Quyền truy cập: [Bất kỳ ai] để lấy liên kết chuẩn dạng https://script.google.com/macros/s/.../exec',
+      };
+    }
+
     try {
-      const res = await fetch(url, {
+      const res = await fetch(rawUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'ping' }),
       });
-      const text = await res.text();
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.success) {
+        return {
+          success: true,
+          message: 'Kết nối thành công với Google Apps Script & Google Sheet!',
+        };
+      }
       return {
-        success: true,
-        message: 'Kết nối thành công với Google Apps Script & Google Sheet!',
+        success: false,
+        message:
+          data?.error ||
+          `Không nhận được phản hồi hợp lệ (Mã HTTP ${res.status}). Hãy đảm bảo đã triển khai Web App với quyền "Bất kỳ ai" (Anyone).`,
       };
     } catch (e: any) {
       return {

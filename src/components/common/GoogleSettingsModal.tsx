@@ -133,11 +133,13 @@ export const GoogleSettingsModal: React.FC = () => {
           )}
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs text-slate-700 space-y-2">
-            <div className="font-bold text-[#17365D]">3 Bước triển khai nhanh trên Google Apps Script:</div>
-            <ol className="list-decimal pl-5 space-y-1 text-slate-600">
-              <li>Mở Google Trang tính mới &gt; <strong>Tiện ích mở rộng</strong> &gt; <strong>Apps Script</strong>.</li>
-              <li>Dán nội dung từ tệp <strong><code>GoogleAppsScript_Code.js</code></strong> có sẵn trong thư mục dự án.</li>
-              <li>Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Tùy chọn triển khai mới (New deployment)</strong> &gt; Loại: <strong>Ứng dụng web (Web App)</strong> &gt; Quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong>.</li>
+            <div className="font-bold text-[#17365D]">3 Bước triển khai chuẩn trên Google Apps Script:</div>
+            <ol className="list-decimal pl-5 space-y-1.5 text-slate-600 leading-relaxed">
+              <li>Mở Google Trang tính của bạn &gt; <strong>Tiện ích mở rộng</strong> &gt; <strong>Apps Script</strong>.</li>
+              <li>Dán nội dung từ tệp <strong><code>GoogleAppsScript_Code.js</code></strong> có sẵn trong ứng dụng.</li>
+              <li>
+                Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Tùy chọn triển khai mới (New deployment)</strong> &gt; Bấm biểu tượng bánh răng ⚙️ chọn <strong>Ứng dụng web (Web App)</strong> <em>(Lưu ý: Không chọn Thư viện/Library)</em> &gt; Quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong> &gt; Bấm <strong>Triển khai</strong> và dán URL có đuôi <strong><code>/exec</code></strong> vào ô trên.
+              </li>
             </ol>
           </div>
 
