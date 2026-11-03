@@ -73,11 +73,25 @@ export const AnalyticsView: React.FC = () => {
   const [pasteText, setPasteText] = useState<string>('');
   const [importNotice, setImportNotice] = useState<string>('');
   const [isCopiedScript, setIsCopiedScript] = useState<boolean>(false);
+  const [detailModalTab, setDetailModalTab] = useState<'quizzes' | 'assignments'>('quizzes');
 
   // Question analysis
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [selectedAnalysisQuizId, setSelectedAnalysisQuizId] = useState<string>('');
   const [questionAnalysisData, setQuestionAnalysisData] = useState<any[]>([]);
+  const [analysisFilter, setAnalysisFilter] = useState<'all' | 'challenging' | 'good'>('all');
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({});
+
+  const safeFormatDateTime = (dateStr: any): string => {
+    if (!dateStr) return 'Chưa ghi nhận';
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleString('vi-VN');
+      }
+    } catch {}
+    return String(dateStr);
+  };
 
   const loadData = () => {
     const ov = AnalyticsService.getOverviewMetrics();
@@ -781,182 +795,510 @@ export const AnalyticsView: React.FC = () => {
       </div>
 
       {/* Pedagogical Question Analysis */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
             <h3 className="font-bold text-base text-[#17365D] font-serif flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-[#F28C28]" />
               <span>PHÂN TÍCH TỶ LỆ TRẢ LỜI CÂU HỎI TRẮC NGHIỆM</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Phát hiện câu hỏi có tỷ lệ trả lời sai cao để giảng viên củng cố trọng tâm trên lớp
+              Đo lường chỉ số chính xác theo thời gian thực, phát hiện câu hỏi học viên hay chọn sai để giảng viên củng cố
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-600 font-medium">Chọn bài kiểm tra:</span>
-            <select
-              value={selectedAnalysisQuizId}
-              onChange={e => {
-                setSelectedAnalysisQuizId(e.target.value);
-                setQuestionAnalysisData(AnalyticsService.getQuestionAnalysis(e.target.value));
-              }}
-              className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-700 font-medium cursor-pointer"
-            >
-              {quizzes.map(q => (
-                <option key={q.id} value={q.id}>
-                  {q.title}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-600 font-medium">Đề kiểm tra:</span>
+              <select
+                value={selectedAnalysisQuizId}
+                onChange={e => {
+                  setSelectedAnalysisQuizId(e.target.value);
+                  setQuestionAnalysisData(AnalyticsService.getQuestionAnalysis(e.target.value));
+                }}
+                className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-700 font-medium cursor-pointer max-w-xs truncate"
+              >
+                {quizzes.map(q => (
+                  <option key={q.id} value={q.id}>
+                    {q.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {questionAnalysisData.length === 0 ? (
-          <p className="text-center py-8 text-xs text-slate-500">Chưa có lượt làm bài nào cho bài kiểm tra này.</p>
-        ) : (
-          <div className="space-y-3">
-            {questionAnalysisData.map((q, idx) => (
-              <div
-                key={q.id}
-                className={`p-4 rounded-xl border transition-all text-xs space-y-2 ${
-                  q.isChallenging
-                    ? 'border-amber-300 bg-amber-50/40'
-                    : 'border-slate-200 bg-white'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#17365D]">Câu {idx + 1}.</span>
-                    <span className="text-slate-500 font-medium">{q.topic}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                      {q.difficulty}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {q.isChallenging && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3 text-amber-600" /> Cần củng cố thêm
-                      </span>
-                    )}
-                    <span className="font-bold text-slate-700">
-                      Đúng: <strong className="text-emerald-700">{q.correctRate}%</strong> ({q.correctCount}/{q.totalResponses} lượt)
-                    </span>
+        {/* Real-time Metrics Dashboard for Selected Quiz */}
+        {(() => {
+          const selectedQuiz = quizzes.find(q => q.id === selectedAnalysisQuizId) || quizzes[0];
+          const selectedQuizAttempts = selectedQuiz ? QuizService.getAttemptsByQuiz(selectedQuiz.id) : [];
+          const totalAttemptsCount = selectedQuizAttempts.length;
+          const avgScore = totalAttemptsCount > 0
+            ? Math.round((selectedQuizAttempts.reduce((acc, a) => acc + (a.score || 0), 0) / totalAttemptsCount) * 10) / 10
+            : 0;
+          const avgPercentage = totalAttemptsCount > 0
+            ? Math.round(selectedQuizAttempts.reduce((acc, a) => acc + (a.percentage || (a.score * 10) || 0), 0) / totalAttemptsCount)
+            : 0;
+          const challengingCount = questionAnalysisData.filter(q => q.isChallenging).length;
+          const goodCount = questionAnalysisData.length - challengingCount;
+
+          const displayedQuestions = questionAnalysisData.filter(q => {
+            if (analysisFilter === 'challenging') return q.isChallenging;
+            if (analysisFilter === 'good') return !q.isChallenging;
+            return true;
+          });
+
+          return (
+            <div className="space-y-4">
+              {/* Summary Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200">
+                  <span className="text-[11px] text-[#17365D] font-medium">Tổng lượt làm bài</span>
+                  <div className="text-lg font-bold text-[#17365D] mt-0.5">
+                    {totalAttemptsCount} <span className="text-xs font-normal text-slate-500">lượt thi</span>
                   </div>
                 </div>
 
-                <p className="text-slate-800 font-medium leading-relaxed">{q.content}</p>
+                <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <span className="text-[11px] text-emerald-800 font-medium">Điểm TB toàn bài</span>
+                  <div className="text-lg font-bold text-emerald-700 mt-0.5">
+                    {avgScore > 0 ? `${avgScore}/10` : '--'}
+                  </div>
+                </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  {q.options.map((opt: string, optIdx: number) => {
-                    const count = q.optionCounts[optIdx] || 0;
-                    const percent = q.totalResponses > 0 ? Math.round((count / q.totalResponses) * 100) : 0;
-                    const isCorrect = optIdx === q.correctAnswer;
+                <div className="p-3.5 bg-purple-50 rounded-xl border border-purple-200">
+                  <span className="text-[11px] text-purple-800 font-medium">Tỷ lệ đúng toàn đề</span>
+                  <div className="text-lg font-bold text-purple-700 mt-0.5">
+                    {avgPercentage > 0 ? `${avgPercentage}%` : '--'}
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200">
+                  <span className="text-[11px] text-amber-800 font-medium">Câu cần củng cố (&lt;60%)</span>
+                  <div className="text-lg font-bold text-amber-700 mt-0.5">
+                    {challengingCount} <span className="text-xs font-normal text-slate-500">/{questionAnalysisData.length} câu</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                  <button
+                    onClick={() => setAnalysisFilter('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                      analysisFilter === 'all'
+                        ? 'bg-white text-[#17365D] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Tất cả ({questionAnalysisData.length})
+                  </button>
+                  <button
+                    onClick={() => setAnalysisFilter('challenging')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1 ${
+                      analysisFilter === 'challenging'
+                        ? 'bg-amber-100 text-amber-900 shadow-xs'
+                        : 'text-amber-700 hover:text-amber-900'
+                    }`}
+                  >
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Cần củng cố ({challengingCount})</span>
+                  </button>
+                  <button
+                    onClick={() => setAnalysisFilter('good')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                      analysisFilter === 'good'
+                        ? 'bg-emerald-100 text-emerald-900 shadow-xs'
+                        : 'text-emerald-700 hover:text-emerald-900'
+                    }`}
+                  >
+                    Đạt chuẩn ({goodCount})
+                  </button>
+                </div>
+
+                <span className="text-[11px] text-slate-500 italic">
+                  Chỉ số cập nhật tự động khi có lượt làm bài mới
+                </span>
+              </div>
+
+              {/* Question List */}
+              {displayedQuestions.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
+                  {analysisFilter === 'challenging'
+                    ? '🎉 Tuyệt vời! Chưa có câu hỏi nào có tỷ lệ sai cao cần củng cố trong bài kiểm tra này.'
+                    : 'Chưa có dữ liệu câu hỏi phù hợp với bộ lọc.'}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {displayedQuestions.map((q, idx) => {
+                    const isExpanded = !!expandedQuestions[q.id];
+                    const hasResponses = q.totalResponses > 0;
 
                     return (
                       <div
-                        key={optIdx}
-                        className={`p-2 rounded-lg border text-[11px] ${
-                          isCorrect ? 'border-emerald-300 bg-emerald-50 text-emerald-950 font-bold' : 'border-slate-200 bg-slate-50 text-slate-600'
+                        key={q.id}
+                        className={`p-4 rounded-xl border transition-all text-xs space-y-2.5 ${
+                          q.isChallenging
+                            ? 'border-amber-300 bg-amber-50/30'
+                            : 'border-slate-200 bg-white'
                         }`}
                       >
-                        <div className="flex justify-between items-center mb-1">
-                          <span>{String.fromCharCode(65 + optIdx)} {isCorrect ? '(Đáp án đúng)' : ''}</span>
-                          <span className="font-mono font-bold">{percent}%</span>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#17365D] text-sm">Câu {idx + 1}.</span>
+                            <span className="text-slate-500 font-medium">{q.topic}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold">
+                              {q.difficulty}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {q.isChallenging && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3 text-amber-600" /> Cần củng cố thêm
+                              </span>
+                            )}
+                            <span className="font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+                              Tỷ lệ đúng:{' '}
+                              <strong className={
+                                !hasResponses
+                                  ? 'text-slate-500'
+                                  : q.correctRate >= 75
+                                  ? 'text-emerald-700'
+                                  : q.correctRate >= 50
+                                  ? 'text-amber-700'
+                                  : 'text-red-600'
+                              }>
+                                {hasResponses ? `${q.correctRate}%` : 'Chưa có lượt thi'}
+                              </strong>{' '}
+                              <span className="text-slate-500 font-normal">
+                                ({q.correctCount}/{q.totalResponses} lượt)
+                              </span>
+                            </span>
+                          </div>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
-                          <div
-                            className={`h-1 rounded-full ${isCorrect ? 'bg-emerald-600' : 'bg-slate-400'}`}
-                            style={{ width: `${percent}%` }}
-                          />
+
+                        <p className="text-slate-800 font-medium leading-relaxed">{q.content}</p>
+
+                        {/* Options distribution grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
+                          {q.options.map((opt: string, optIdx: number) => {
+                            const count = q.optionCounts[optIdx] || 0;
+                            const percent = q.totalResponses > 0 ? Math.round((count / q.totalResponses) * 100) : 0;
+                            const isCorrect = optIdx === q.correctAnswer;
+
+                            return (
+                              <div
+                                key={optIdx}
+                                className={`p-2.5 rounded-lg border text-[11px] transition-colors ${
+                                  isCorrect
+                                    ? 'border-emerald-300 bg-emerald-50 text-emerald-950 font-bold'
+                                    : 'border-slate-200 bg-slate-50 text-slate-600'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="flex items-center gap-1">
+                                    <span>{String.fromCharCode(65 + optIdx)}.</span>
+                                    {isCorrect && (
+                                      <span className="text-[10px] px-1 rounded bg-emerald-200 text-emerald-800">
+                                        ✓ Đáp án đúng
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-700">
+                                    {hasResponses ? `${percent}%` : '--'}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                  <div
+                                    className={`h-1.5 rounded-full ${
+                                      isCorrect ? 'bg-emerald-600' : 'bg-slate-400'
+                                    }`}
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                </div>
+                                <div className="text-[10px] text-slate-500 mt-1 flex justify-between">
+                                  <span>{count} lượt chọn</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Expandable Explanation & Legal Basis */}
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedQuestions(prev => ({
+                                ...prev,
+                                [q.id]: !prev[q.id],
+                              }))
+                            }
+                            className="text-[11px] text-[#245A91] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>{isExpanded ? 'Ẩn giải thích & Căn cứ pháp lý' : 'Xem giải thích chi tiết & Căn cứ'}</span>
+                            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-2 p-3 bg-blue-50/80 rounded-xl border border-blue-200 text-[11px] space-y-1.5 animate-fadeIn">
+                              {q.explanation && (
+                                <p className="text-slate-800 leading-relaxed">
+                                  <strong>Giải thích & Căn cứ:</strong> {q.explanation}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Drilldown Modal for Individual Student Record */}
-      {selectedStudentDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
-            <div className="bg-[#17365D] text-white px-6 py-4 flex items-center justify-between shrink-0">
-              <div>
-                <h3 className="font-bold text-base font-serif">Hồ sơ quá trình học tập</h3>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  {selectedStudentDetail.studentName} • Mã SV: {selectedStudentDetail.studentId} • {selectedStudentDetail.studentClass}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedStudentDetail(null)}
-                className="text-slate-300 hover:text-white cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
+      {selectedStudentDetail && (() => {
+        const studentSubs = AssignmentService.getSubmissions().filter(s =>
+          (s.studentUid && selectedStudentDetail.uid && s.studentUid === selectedStudentDetail.uid) ||
+          (s.studentId && selectedStudentDetail.studentId && s.studentId.trim().toUpperCase() === selectedStudentDetail.studentId.trim().toUpperCase())
+        );
 
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] text-slate-500">Nhiệm vụ đã nộp</span>
-                  <div className="text-lg font-bold text-slate-800">
-                    {selectedStudentDetail.submittedCount}/{selectedStudentDetail.totalAssignments}
+        const studentAttempts = QuizService.getAttempts().filter(a =>
+          (a.studentUid && selectedStudentDetail.uid && a.studentUid === selectedStudentDetail.uid) ||
+          (a.studentId && selectedStudentDetail.studentId && a.studentId.trim().toUpperCase() === selectedStudentDetail.studentId.trim().toUpperCase())
+        );
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-[#17365D] via-[#1c4373] to-[#245A91] text-white px-6 py-4 flex items-center justify-between shrink-0">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-base font-serif">Hồ sơ tiến độ học tập chi tiết</h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white">
+                      {selectedStudentDetail.academicStatus}
+                    </span>
                   </div>
+                  <p className="text-xs text-slate-200 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span><strong>Học viên:</strong> {selectedStudentDetail.studentName}</span>
+                    <span>•</span>
+                    <span><strong>Mã SV:</strong> {selectedStudentDetail.studentId}</span>
+                    <span>•</span>
+                    <span><strong>Lớp:</strong> {selectedStudentDetail.studentClass}</span>
+                    {selectedStudentDetail.email && (
+                      <>
+                        <span>•</span>
+                        <span>{selectedStudentDetail.email}</span>
+                      </>
+                    )}
+                  </p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] text-slate-500">Tỷ lệ hoàn thành</span>
-                  <div className="text-lg font-bold text-[#245A91]">{selectedStudentDetail.completionRate}%</div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] text-slate-500">Điểm TB trắc nghiệm</span>
-                  <div className="text-lg font-bold text-emerald-700">{selectedStudentDetail.avgQuizScore}/10</div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 mb-2">
-                  Các bài tự nghiên cứu của sinh viên:
-                </h4>
-                <div className="space-y-2">
-                  {AssignmentService.getSubmissions()
-                    .filter(s => s.studentUid === selectedStudentDetail.uid)
-                    .map(sub => {
-                      const ass = AssignmentService.getById(sub.assignmentId);
-                      return (
-                        <div key={sub.id} className="p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-1">
-                          <div className="flex justify-between font-bold text-slate-800">
-                            <span>{ass?.title}</span>
-                            <span className="text-emerald-700">Điểm: {sub.score !== undefined ? `${sub.score}/10` : 'Chưa chấm'}</span>
-                          </div>
-                          <p className="text-slate-500 text-[11px]">Nộp lúc: {new Date(sub.submittedAt).toLocaleString('vi-VN')}</p>
-                          {sub.feedback && (
-                            <p className="text-slate-700 italic bg-white p-2 rounded border border-slate-200">
-                              Nhận xét: {sub.feedback}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-200 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setSelectedStudentDetail(null)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Đóng cửa sổ"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 4 Summary Stat Cards */}
+              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0 text-center text-xs">
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] text-slate-500 font-medium">Nhiệm vụ đã nộp</span>
+                  <div className="text-base sm:text-lg font-bold text-slate-800 mt-0.5">
+                    {studentSubs.length}/{selectedStudentDetail.totalAssignments} bài
+                  </div>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] text-slate-500 font-medium">Tỷ lệ hoàn thành</span>
+                  <div className="text-base sm:text-lg font-bold text-[#245A91] mt-0.5">
+                    {selectedStudentDetail.completionRate}%
+                  </div>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] text-slate-500 font-medium">Điểm TB trắc nghiệm</span>
+                  <div className="text-base sm:text-lg font-bold text-emerald-700 mt-0.5">
+                    {selectedStudentDetail.avgQuizScore > 0 ? `${selectedStudentDetail.avgQuizScore}/10` : '--'}
+                  </div>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] text-slate-500 font-medium">Lượt ôn trắc nghiệm</span>
+                  <div className="text-base sm:text-lg font-bold text-[#F28C28] mt-0.5">
+                    {studentAttempts.length} lượt
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs Switcher */}
+              <div className="flex border-b border-slate-200 px-6 bg-white shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setDetailModalTab('quizzes')}
+                  className={`py-3 px-4 font-bold text-xs border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                    detailModalTab === 'quizzes'
+                      ? 'border-[#245A91] text-[#17365D]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Award className="w-4 h-4 text-[#F28C28]" />
+                  <span>Kết quả Ôn tập trắc nghiệm ({studentAttempts.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalTab('assignments')}
+                  className={`py-3 px-4 font-bold text-xs border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                    detailModalTab === 'assignments'
+                      ? 'border-[#245A91] text-[#17365D]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4 text-[#245A91]" />
+                  <span>Bài nộp Tự nghiên cứu ({studentSubs.length})</span>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+                {detailModalTab === 'quizzes' && (
+                  <div className="space-y-3">
+                    {studentAttempts.length === 0 ? (
+                      <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 space-y-2">
+                        <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
+                        <p className="font-medium">Học viên chưa thực hiện lượt ôn tập trắc nghiệm nào trên hệ thống.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-[#17365D] text-white uppercase text-[10px] tracking-wider font-semibold">
+                            <tr>
+                              <th className="px-3 py-2.5 text-center">STT</th>
+                              <th className="px-3 py-2.5">Bài kiểm tra</th>
+                              <th className="px-3 py-2.5 text-center">Điểm số</th>
+                              <th className="px-3 py-2.5 text-center">Tỷ lệ đúng</th>
+                              <th className="px-3 py-2.5 text-center">Đúng / Sai</th>
+                              <th className="px-3 py-2.5 text-center">Thời gian</th>
+                              <th className="px-3 py-2.5">Ngày nộp</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {studentAttempts.map((att, idx) => (
+                              <tr key={att.id || idx} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-3 py-2.5 text-center font-mono text-slate-400">{idx + 1}</td>
+                                <td className="px-3 py-2.5 font-semibold text-slate-800">
+                                  {QuizService.getQuizById(att.quizId)?.title || (att as any).quizTitle || att.quizId}
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    {att.score}/10
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2.5 text-center font-mono font-bold text-slate-700">
+                                  {att.percentage}%
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <span className="text-emerald-700 font-semibold">{att.correctCount}Đ</span>
+                                  <span className="text-slate-400 mx-1">/</span>
+                                  <span className="text-red-600 font-semibold">{att.wrongCount}S</span>
+                                </td>
+                                <td className="px-3 py-2.5 text-center text-slate-500 font-mono">
+                                  {att.durationSeconds > 0
+                                    ? att.durationSeconds >= 60
+                                      ? `${Math.floor(att.durationSeconds / 60)}p ${att.durationSeconds % 60}s`
+                                      : `${att.durationSeconds}s`
+                                    : '--'}
+                                </td>
+                                <td className="px-3 py-2.5 text-slate-500">
+                                  {safeFormatDateTime(att.completedAt || att.startedAt)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailModalTab === 'assignments' && (
+                  <div className="space-y-3">
+                    {studentSubs.length === 0 ? (
+                      <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 space-y-2">
+                        <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
+                        <p className="font-medium">Học viên chưa nộp bài tự nghiên cứu nào trên hệ thống.</p>
+                      </div>
+                    ) : (
+                      studentSubs.map((sub, idx) => {
+                        const ass = AssignmentService.getById(sub.assignmentId);
+                        const title = ass?.title || (sub as any).assignmentTitle || sub.assignmentId || `Nhiệm vụ ${idx + 1}`;
+                        return (
+                          <div key={sub.id || idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                              <span className="font-bold text-slate-800 text-sm">{title}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  sub.score !== undefined ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                }`}>
+                                  {sub.score !== undefined ? `Điểm: ${sub.score}/10` : 'Chờ chấm'}
+                                </span>
+                                <span className="text-[11px] text-slate-500 font-mono">
+                                  Nộp: {safeFormatDateTime(sub.submittedAt)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {sub.feedback && (
+                              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-slate-700">
+                                <strong className="text-emerald-900">Nhận xét của giảng viên:</strong> {sub.feedback}
+                              </div>
+                            )}
+
+                            {sub.textContent && (
+                              <div className="p-3 rounded-lg bg-white border border-slate-200">
+                                <span className="font-bold text-slate-600 block mb-1 text-[11px]">Nội dung bài làm:</span>
+                                <p className="text-slate-800 whitespace-pre-wrap leading-relaxed">{sub.textContent}</p>
+                              </div>
+                            )}
+
+                            {sub.attachedFileName && (
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-mono text-[11px]">
+                                <FileText className="w-3.5 h-3.5 text-[#F28C28]" />
+                                <span>Tệp đính kèm: <strong>{sub.attachedFileName}</strong></span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+                <span className="text-[11px] text-slate-500 italic">
+                  Dữ liệu được lưu trữ an toàn và đồng bộ thời gian thực với hệ thống Google Sheet.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentDetail(null)}
+                  className="px-5 py-2 bg-[#17365D] hover:bg-[#245A91] text-white font-semibold rounded-xl text-xs cursor-pointer transition-colors"
                 >
                   Đóng
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal 1: Nhập dữ liệu thủ công / Dán từ Google Sheet */}
       {showImportModal && (
