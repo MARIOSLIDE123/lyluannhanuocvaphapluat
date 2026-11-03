@@ -614,11 +614,24 @@ function getMaterialsFromSheet(ss) {
         });
 
         if (!exists && dr[1]) {
+          var titleStr = dr[1].toString();
+          var titleLower = titleStr.toLowerCase();
+          var assignedCat = "02_main_textbooks";
+          if (titleLower.indexOf("thảo luận") > -1 || titleLower.indexOf("thao luan") > -1 || titleLower.indexOf("câu hỏi thảo luận") > -1) {
+            assignedCat = "04_discussion_topics";
+          } else if (titleLower.indexOf("tình huống") > -1 || titleLower.indexOf("tinh huong") > -1 || titleLower.indexOf("bài tập") > -1) {
+            assignedCat = "05_case_studies";
+          } else if (titleLower.indexOf("đề cương") > -1 || titleLower.indexOf("đcct") > -1 || titleLower.indexOf("de cuong") > -1) {
+            assignedCat = "01_syllabus";
+          } else if (titleLower.indexOf("tham khảo") > -1 || titleLower.indexOf("văn bản") > -1 || titleLower.indexOf("luật") > -1) {
+            assignedCat = "03_references";
+          }
+
           materials.unshift({
             id: "mat-drive-" + (fileId || k),
-            title: dr[1].toString(),
+            title: titleStr,
             description: "Tài liệu học phần tải lên Google Drive",
-            category: "02_textbooks",
+            category: assignedCat,
             chapter: dr[2] ? dr[2].toString() : "Chương chung",
             authorOrIssuer: "Khoa Luật",
             issueDate: "",

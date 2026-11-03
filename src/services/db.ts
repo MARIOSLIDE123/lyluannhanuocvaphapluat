@@ -10,6 +10,8 @@ import {
   SystemConfig,
 } from '../types';
 import { OFFICIAL_QUIZ_SETS, OFFICIAL_QUIZ_QUESTIONS } from '../data/questionBanks';
+import { OFFICIAL_ASSIGNMENTS } from '../data/assignments';
+import { OFFICIAL_MATERIALS } from '../data/materials';
 import { GoogleSyncService } from './googleSync';
 
 const STORAGE_KEYS = {
@@ -113,9 +115,9 @@ export const TEACHER_CREDENTIALS = {
 // Demo Student Profiles (empty by default)
 const DEMO_STUDENTS: UserProfile[] = [];
 
-// Seed Sample Data (Cleaned and emptied as requested)
-const SEED_MATERIALS: MaterialItem[] = [];
-const SEED_ASSIGNMENTS: AssignmentItem[] = [];
+// Official Seed Data for LLNN&PL
+const SEED_MATERIALS: MaterialItem[] = OFFICIAL_MATERIALS;
+const SEED_ASSIGNMENTS: AssignmentItem[] = OFFICIAL_ASSIGNMENTS;
 const SEED_SUBMISSIONS: SubmissionItem[] = [];
 const SEED_QUIZZES: QuizItem[] = OFFICIAL_QUIZ_SETS;
 const SEED_QUESTIONS: QuizQuestion[] = OFFICIAL_QUIZ_QUESTIONS;
@@ -270,6 +272,42 @@ export function initializeDatabase() {
   if (questionsChanged) {
     saveStorage(STORAGE_KEYS.QUESTIONS, existingQuestions);
     notify('questions');
+  }
+
+  // Idempotently ensure all 5 Official Self-Study Assignments are loaded and up-to-date
+  const existingAssignments = loadStorage<AssignmentItem[]>(STORAGE_KEYS.ASSIGNMENTS, []);
+  let assignmentsChanged = false;
+  OFFICIAL_ASSIGNMENTS.forEach(officialA => {
+    const idx = existingAssignments.findIndex(a => a.id === officialA.id);
+    if (idx >= 0) {
+      existingAssignments[idx] = { ...existingAssignments[idx], ...officialA };
+      assignmentsChanged = true;
+    } else {
+      existingAssignments.push(officialA);
+      assignmentsChanged = true;
+    }
+  });
+  if (assignmentsChanged || existingAssignments.length === 0) {
+    saveStorage(STORAGE_KEYS.ASSIGNMENTS, existingAssignments.length > 0 ? existingAssignments : OFFICIAL_ASSIGNMENTS);
+    notify('assignments');
+  }
+
+  // Idempotently ensure all Official Materials for all 5 categories are loaded and available
+  const existingMaterials = loadStorage<MaterialItem[]>(STORAGE_KEYS.MATERIALS, []);
+  let materialsChanged = false;
+  OFFICIAL_MATERIALS.forEach(officialM => {
+    const idx = existingMaterials.findIndex(m => m.id === officialM.id);
+    if (idx >= 0) {
+      existingMaterials[idx] = { ...existingMaterials[idx], ...officialM };
+      materialsChanged = true;
+    } else {
+      existingMaterials.push(officialM);
+      materialsChanged = true;
+    }
+  });
+  if (materialsChanged || existingMaterials.length === 0) {
+    saveStorage(STORAGE_KEYS.MATERIALS, existingMaterials.length > 0 ? existingMaterials : OFFICIAL_MATERIALS);
+    notify('materials');
   }
 }
 
@@ -510,6 +548,20 @@ export const MaterialService = {
         return false;
       }
       return true;
+    }).map(item => {
+      // Tự động chuẩn hóa phân loại dựa trên tiêu đề tài liệu nếu chưa được xếp đúng nhóm
+      const titleLower = ((item.title || '') + ' ' + (item.fileName || '')).toLowerCase();
+      let cat = item.category;
+      if (titleLower.includes('thảo luận') || titleLower.includes('thao luan') || titleLower.includes('câu hỏi thảo luận')) {
+        cat = '04_discussion_topics';
+      } else if (titleLower.includes('tình huống') || titleLower.includes('tinh huong') || titleLower.includes('bài tập')) {
+        cat = '05_case_studies';
+      } else if (titleLower.includes('đề cương') || titleLower.includes('đcct') || titleLower.includes('de cuong')) {
+        cat = '01_syllabus';
+      } else if (titleLower.includes('văn bản') || titleLower.includes('tham khảo') || titleLower.includes('luật')) {
+        cat = '03_references';
+      }
+      return { ...item, category: cat };
     });
 
     const current = this.getAll();
@@ -543,7 +595,12 @@ export const MaterialService = {
 // ================= ASSIGNMENTS & SUBMISSIONS =================
 export const AssignmentService = {
   getAll(): AssignmentItem[] {
-    return loadStorage<AssignmentItem[]>(STORAGE_KEYS.ASSIGNMENTS, SEED_ASSIGNMENTS);
+    const list = loadStorage<AssignmentItem[]>(STORAGE_KEYS.ASSIGNMENTS, SEED_ASSIGNMENTS);
+    if (!list || list.length === 0) {
+      saveStorage(STORAGE_KEYS.ASSIGNMENTS, OFFICIAL_ASSIGNMENTS);
+      return OFFICIAL_ASSIGNMENTS;
+    }
+    return list;
   },
   getPublished(): AssignmentItem[] {
     return this.getAll().filter(a => a.status === 'published' || a.status === 'closed');
