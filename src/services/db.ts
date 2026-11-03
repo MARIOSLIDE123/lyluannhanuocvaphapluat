@@ -1074,13 +1074,10 @@ export const AnalyticsService = {
     const quizzes = QuizService.getPublishedQuizzes();
     const attempts = QuizService.getAttempts();
 
-    // Assignment completion stats
-    const totalPossibleSubmissions = students.length * assignments.length;
-    const actualSubmissions = submissions.length;
-    const completionRate =
-      totalPossibleSubmissions > 0
-        ? Math.round((actualSubmissions / totalPossibleSubmissions) * 100)
-        : 0;
+    const progressList = this.getStudentProgressList();
+    const avgCompletion = progressList.length > 0
+      ? Math.round(progressList.reduce((sum, s) => sum + s.completionRate, 0) / progressList.length)
+      : 0;
 
     // Quiz average score
     const avgQuizScore =
@@ -1093,8 +1090,8 @@ export const AnalyticsService = {
     return {
       totalStudents: students.length,
       activeAssignments: assignments.length,
-      totalSubmissions: actualSubmissions,
-      completionRate,
+      totalSubmissions: submissions.length,
+      completionRate: avgCompletion,
       publishedQuizzes: quizzes.length,
       totalAttempts: attempts.length,
       avgQuizScore,
@@ -1106,16 +1103,38 @@ export const AnalyticsService = {
     const assignments = AssignmentService.getPublished();
     const submissions = AssignmentService.getSubmissions();
     const attempts = QuizService.getAttempts();
+    const quizzes = QuizService.getPublishedQuizzes();
 
     return students.map(student => {
-      const studentSubs = submissions.filter(s => s.studentUid === student.uid);
-      const studentAttempts = attempts.filter(a => a.studentUid === student.uid);
+      const cleanStudentId = (student.studentId || '').trim().toUpperCase();
+
+      // Khớp nối thông minh theo cả UID và Mã sinh viên (không phân biệt chữ hoa/thường)
+      const studentSubs = submissions.filter(s =>
+        (s.studentUid && s.studentUid === student.uid) ||
+        (cleanStudentId && s.studentId && s.studentId.trim().toUpperCase() === cleanStudentId)
+      );
+
+      const studentAttempts = attempts.filter(a =>
+        (a.studentUid && a.studentUid === student.uid) ||
+        (cleanStudentId && a.studentId && a.studentId.trim().toUpperCase() === cleanStudentId)
+      );
+
+      // Đếm số lượng nhiệm vụ tự nghiên cứu duy nhất đã hoàn thành (tránh tính trùng lặp khi học viên cập nhật nộp lại)
+      const uniqueSubmittedAssignmentIds = new Set(
+        studentSubs.map(s => (s.assignmentId || (s as any).assignmentTitle || '').trim()).filter(Boolean)
+      );
+      const uniqueSubmittedCount = assignments.length > 0
+        ? Math.min(uniqueSubmittedAssignmentIds.size, assignments.length)
+        : studentSubs.length;
 
       // Best score per quiz
       const quizMap = new Map<string, number>();
       studentAttempts.forEach(a => {
-        const current = quizMap.get(a.quizId) || 0;
-        if (a.score > current) quizMap.set(a.quizId, a.score);
+        const qKey = a.quizId || (a as any).quizTitle;
+        if (qKey) {
+          const current = quizMap.get(qKey) || 0;
+          if (a.score > current) quizMap.set(qKey, a.score);
+        }
       });
 
       const avgQuizScore =
@@ -1126,16 +1145,19 @@ export const AnalyticsService = {
             ) / 10
           : 0;
 
+      // Tính toán tỷ lệ hoàn thành chính xác (%) dựa trên số nhiệm vụ tự nghiên cứu chuẩn hóa
       const completionRate =
         assignments.length > 0
-          ? Math.round((studentSubs.length / assignments.length) * 100)
+          ? Math.min(100, Math.round((uniqueSubmittedCount / assignments.length) * 100))
+          : quizMap.size > 0
+          ? Math.min(100, Math.round((quizMap.size / Math.max(1, quizzes.length)) * 100))
           : 0;
 
       let academicStatus: 'Xuất sắc' | 'Đạt' | 'Cần cố gắng' | 'Chưa nộp bài' = 'Chưa nộp bài';
-      if (studentSubs.length > 0 || studentAttempts.length > 0) {
+      if (uniqueSubmittedCount > 0 || studentAttempts.length > 0) {
         if (assignments.length > 0) {
           if (avgQuizScore >= 8.5 && completionRate >= 80) academicStatus = 'Xuất sắc';
-          else if (avgQuizScore >= 5.0 && completionRate >= 50) academicStatus = 'Đạt';
+          else if (avgQuizScore >= 5.0 || completionRate >= 40) academicStatus = 'Đạt';
           else academicStatus = 'Cần cố gắng';
         } else {
           // Khi chưa có bài tập nộp, xếp loại dựa trên điểm trắc nghiệm củng cố
@@ -1151,7 +1173,7 @@ export const AnalyticsService = {
         studentName: student.displayName,
         studentClass: student.studentClass || 'Chưa phân lớp',
         email: student.email,
-        submittedCount: studentSubs.length,
+        submittedCount: uniqueSubmittedCount,
         totalAssignments: assignments.length,
         completionRate,
         avgQuizScore,

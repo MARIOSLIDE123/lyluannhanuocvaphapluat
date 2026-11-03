@@ -1227,18 +1227,26 @@ export const AnalyticsView: React.FC = () => {
         );
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto animate-fadeIn"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedStudentDetail(null);
+            }}
+          >
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[82vh] my-auto flex flex-col overflow-hidden border border-slate-300 ring-1 ring-slate-900/10"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Modal Header */}
-              <div className="bg-gradient-to-r from-[#17365D] via-[#1c4373] to-[#245A91] text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="bg-gradient-to-r from-[#17365D] via-[#1c4373] to-[#245A91] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-base font-serif">Hồ sơ tiến độ học tập chi tiết</h3>
+                    <h3 className="font-bold text-sm sm:text-base font-serif">Hồ sơ tiến độ học tập</h3>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white">
                       {selectedStudentDetail.academicStatus}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-200 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-xs text-slate-200 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span><strong>Học viên:</strong> {selectedStudentDetail.studentName}</span>
                     <span>•</span>
                     <span><strong>Mã SV:</strong> {selectedStudentDetail.studentId}</span>
@@ -1255,7 +1263,7 @@ export const AnalyticsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedStudentDetail(null)}
-                  className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                  className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
                   title="Đóng cửa sổ"
                 >
                   <X className="w-5 h-5" />
@@ -1263,28 +1271,28 @@ export const AnalyticsView: React.FC = () => {
               </div>
 
               {/* 4 Summary Stat Cards */}
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0 text-center text-xs">
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+              <div className="p-3 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-center text-xs">
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
                   <span className="text-[11px] text-slate-500 font-medium">Nhiệm vụ đã nộp</span>
-                  <div className="text-base sm:text-lg font-bold text-slate-800 mt-0.5">
+                  <div className="text-sm sm:text-base font-bold text-slate-800 mt-0.5">
                     {studentSubs.length}/{selectedStudentDetail.totalAssignments} bài
                   </div>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
                   <span className="text-[11px] text-slate-500 font-medium">Tỷ lệ hoàn thành</span>
-                  <div className="text-base sm:text-lg font-bold text-[#245A91] mt-0.5">
+                  <div className="text-sm sm:text-base font-bold text-[#245A91] mt-0.5">
                     {selectedStudentDetail.completionRate}%
                   </div>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
                   <span className="text-[11px] text-slate-500 font-medium">Điểm TB trắc nghiệm</span>
-                  <div className="text-base sm:text-lg font-bold text-emerald-700 mt-0.5">
+                  <div className="text-sm sm:text-base font-bold text-emerald-700 mt-0.5">
                     {selectedStudentDetail.avgQuizScore > 0 ? `${selectedStudentDetail.avgQuizScore}/10` : '--'}
                   </div>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
                   <span className="text-[11px] text-slate-500 font-medium">Lượt ôn trắc nghiệm</span>
-                  <div className="text-base sm:text-lg font-bold text-[#F28C28] mt-0.5">
+                  <div className="text-sm sm:text-base font-bold text-[#F28C28] mt-0.5">
                     {studentAttempts.length} lượt
                   </div>
                 </div>
