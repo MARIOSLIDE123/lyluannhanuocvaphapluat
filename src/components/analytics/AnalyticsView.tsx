@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3,
   Users,
@@ -27,6 +27,9 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   X,
   FileText,
   Sparkles,
@@ -198,17 +201,54 @@ export const AnalyticsView: React.FC = () => {
 
   const uniqueClasses = UserService.getUniqueClasses();
 
-  // Filtered students
-  const filteredStudents = studentProgressList.filter(s => {
-    if (selectedClass !== 'all' && s.studentClass !== selectedClass) return false;
-    if (searchStudent.trim()) {
-      const q = searchStudent.toLowerCase();
-      const matchName = s.studentName.toLowerCase().includes(q);
-      const matchId = s.studentId.toLowerCase().includes(q);
-      if (!matchName && !matchId) return false;
-    }
-    return true;
-  });
+  // Helper hàm loại bỏ dấu tiếng Việt để tìm kiếm thông minh không phân biệt dấu
+  const removeAccents = (str: string) => {
+    return (str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  };
+
+  // Filtered students with instant multi-field and accent-insensitive search
+  const filteredStudents = useMemo(() => {
+    return studentProgressList.filter(s => {
+      if (selectedClass !== 'all' && s.studentClass !== selectedClass) return false;
+      if (searchStudent.trim()) {
+        const query = searchStudent.trim().toLowerCase();
+        const queryNoAccents = removeAccents(query);
+
+        const name = (s.studentName || '').toLowerCase();
+        const nameNoAccents = removeAccents(s.studentName || '');
+        const id = (s.studentId || '').toLowerCase();
+        const sClass = (s.studentClass || '').toLowerCase();
+        const email = (s.email || '').toLowerCase();
+
+        const match =
+          name.includes(query) ||
+          nameNoAccents.includes(queryNoAccents) ||
+          id.includes(query) ||
+          sClass.includes(query) ||
+          email.includes(query);
+
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [studentProgressList, selectedClass, searchStudent]);
+
+  // Phân trang 20 sinh viên / trang
+  const STUDENTS_PER_PAGE = 20;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Tự động quay về trang 1 khi thay đổi từ khóa tìm kiếm hoặc lọc lớp
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchStudent, selectedClass]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / STUDENTS_PER_PAGE));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * STUDENTS_PER_PAGE;
+  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + STUDENTS_PER_PAGE);
 
   const handleExportGradebook = () => {
     exportGradebookToExcel(filteredStudents);
@@ -676,15 +716,25 @@ export const AnalyticsView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-56">
+            <div className="relative w-full sm:w-64">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchStudent}
                 onChange={e => setSearchStudent(e.target.value)}
-                placeholder="Tìm tên, Mã SV..."
-                className="w-full pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-1 focus:ring-[#245A91]"
+                placeholder="Tìm theo tên, Mã SV, Lớp..."
+                className="w-full pl-8 pr-7 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-1 focus:ring-[#245A91]"
               />
+              {searchStudent && (
+                <button
+                  type="button"
+                  onClick={() => setSearchStudent('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <select
@@ -719,16 +769,20 @@ export const AnalyticsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredStudents.length === 0 ? (
+              {paginatedStudents.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
-                    Chưa có dữ liệu để thống kê hoặc không tìm thấy sinh viên phù hợp.
+                    {searchStudent.trim()
+                      ? `Không tìm thấy sinh viên nào phù hợp với từ khóa "${searchStudent}".`
+                      : 'Chưa có dữ liệu để thống kê.'}
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((s, idx) => (
+                paginatedStudents.map((s, idx) => (
                   <tr key={s.uid} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 py-3 text-center text-slate-400 font-mono">{idx + 1}</td>
+                    <td className="px-3 py-3 text-center text-slate-400 font-mono">
+                      {startIndex + idx + 1}
+                    </td>
                     <td className="px-3.5 py-3 font-mono font-bold text-slate-700">{s.studentId}</td>
                     <td className="px-3.5 py-3 font-semibold text-slate-800">{s.studentName}</td>
                     <td className="px-3.5 py-3 text-slate-600 font-medium">{s.studentClass}</td>
@@ -792,6 +846,104 @@ export const AnalyticsView: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar (20 sinh viên / trang) */}
+        {filteredStudents.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
+            <div className="text-slate-500 text-center sm:text-left">
+              Hiển thị <strong className="text-slate-800">{startIndex + 1}</strong> –{' '}
+              <strong className="text-slate-800">
+                {Math.min(startIndex + STUDENTS_PER_PAGE, filteredStudents.length)}
+              </strong>{' '}
+              trong tổng số <strong className="text-[#17365D]">{filteredStudents.length}</strong> sinh viên
+              {totalPages > 1 && (
+                <span className="ml-1 text-slate-400">
+                  (Trang {safeCurrentPage}/{totalPages})
+                </span>
+              )}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={safeCurrentPage === 1}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Trang đầu"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Trang trước"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Page number buttons */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    return page === 1 || page === totalPages || Math.abs(page - safeCurrentPage) <= 2;
+                  })
+                  .reduce<(number | string)[]>((acc, page, idx, arr) => {
+                    if (idx > 0 && page - (arr[idx - 1] as number) > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(page);
+                    return acc;
+                  }, [])
+                  .map((item, idx) => {
+                    if (item === '...') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="px-1.5 text-slate-400 text-xs">
+                          ...
+                        </span>
+                      );
+                    }
+                    const pageNum = item as number;
+                    const isActive = pageNum === safeCurrentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#17365D] text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Trang tiếp theo"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={safeCurrentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Trang cuối"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Pedagogical Question Analysis */}
